@@ -96,7 +96,7 @@ export const getCommitment = async () => {
 /** 
 * Invoke the "zkproof_request" method from the example snap.
 */
-export const getZkProof = async () : Promise<boolean> => {
+export const getZkProof = async () : Promise<string> => {
  let identityString = await window.ethereum.request({
    method: 'wallet_invokeSnap',
    params: { snapId: defaultSnapOrigin, request: { method: 'zkproof_request', params: {source:"twitter"} } },
@@ -120,31 +120,34 @@ export const getZkProof = async () : Promise<boolean> => {
   console.log(members);
   const group = new Group(groupId, 20, members);
   const signal = 1;
-  const commitment=identity.commitment;
+  /*const commitment=identity.commitment;
   console.log("Checking commitment: "+commitment);
-if (members.includes(commitment.toString())){
-  console.log("Membership proof verified");
-  return true;
-}
-else {
-  console.log("Membership proof not verified");
-
-  return false;
-
-}
+  if (members.includes(commitment.toString())){
+    console.log("Membership proof verified");
+    return true;
+  }
+  else {
+    console.log("Membership proof not verified");
+    return false;
+  }*/
   /*const fullProof = await generateProof(identity, group, groupId, signal, {
     zkeyFilePath: "./semaphore.zkey",
     wasmFilePath: "./semaphore.wasm"
 })*/
-  //const proof = await generateProof(identity, group, groupId, signal);
-  //console.log(proof); 
+  const proof = await generateProof(identity, group, groupId, signal);
+  console.log(proof); 
 
   // zk proof verification
-  /*const verified = await verifyZKProofSentByUser(proof);
-  if (verified)
+  const verified = await verifyZKProofSentByUser(proof);
+  if (verified) {
     alert("Proof is valid");
-  else 
-    alert ("Proof invalid");*/
+    return JSON.stringify(proof);
+
+  }
+  else {
+    alert ("Proof invalid");
+    return "Invalid proof";
+  }
 };
 
 

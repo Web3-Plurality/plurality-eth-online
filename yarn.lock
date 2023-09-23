@@ -6793,6 +6793,9 @@ __metadata:
     "@metamask/eslint-config-typescript": ^10.0.0
     "@typescript-eslint/eslint-plugin": ^5.33.0
     "@typescript-eslint/parser": ^5.33.0
+    assert: ^2.1.0
+    buffer: ^6.0.3
+    crypto-browserify: ^3.12.0
     eslint: ^8.21.0
     eslint-config-prettier: ^8.1.0
     eslint-plugin-import: ^2.26.0
@@ -6800,9 +6803,16 @@ __metadata:
     eslint-plugin-jsdoc: ^39.2.9
     eslint-plugin-node: ^11.1.0
     eslint-plugin-prettier: ^4.2.1
+    https-browserify: ^1.0.0
+    os-browserify: ^0.3.0
+    path-browserify: ^1.0.1
     prettier: ^2.2.1
     prettier-plugin-packagejson: ^2.2.18
+    stream-browserify: ^3.0.0
+    stream-http: ^3.2.0
     typescript: ^4.7.4
+    url: ^0.11.3
+    util: ^0.12.5
   languageName: unknown
   linkType: soft
 
@@ -12116,7 +12126,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"assert@npm:^2.0.0":
+"assert@npm:^2.0.0, assert@npm:^2.1.0":
   version: 2.1.0
   resolution: "assert@npm:2.1.0"
   dependencies:
@@ -31393,7 +31403,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"url@npm:^0.11.1, url@npm:~0.11.0":
+"url@npm:^0.11.1, url@npm:^0.11.3, url@npm:~0.11.0":
   version: 0.11.3
   resolution: "url@npm:0.11.3"
   dependencies:

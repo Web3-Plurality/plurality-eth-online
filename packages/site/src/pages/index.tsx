@@ -20,6 +20,9 @@ import { ContentFocus, DuplicatedHandleError, ProfileOwnedByMe, useActiveProfile
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from 'react-bootstrap';
+import { generateProof } from '@semaphore-protocol/proof';
+import { Identity } from '@semaphore-protocol/identity';
+import { Group } from '@semaphore-protocol/group';
 
   
 const Container = styled.div`
@@ -314,7 +317,7 @@ const Index = () => {
     }
   }
 
-  async function createPost() {
+  async function createPost(zkproof: string) {
 
     const params = new URLSearchParams(window.location.search)
     const username = params.get('username')!;
@@ -323,6 +326,7 @@ const Index = () => {
 
     const postContent = "Gm folks! \n"+
                         "I just connected my " + platform + " with username "+ username + " \n" +
+                        "My zkproof is: " + zkproof +" \n" + 
                         "Let's make social media sovereign!"; 
     try {
     const result = await create({
@@ -349,14 +353,14 @@ const Index = () => {
     await getCommitment();
     // get zk
     const result = await getZkProof();
-      if (result) {
+      if (result !== "Invalid proof") {
         dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation ownership proved" });
       }
       else
         dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation invalid" });
     // port to lens
 
-    await createPost();
+    await createPost(result);
     await updateProfile();
   };
 
