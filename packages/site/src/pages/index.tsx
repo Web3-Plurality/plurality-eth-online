@@ -1,6 +1,6 @@
-import { useContext } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import styled from 'styled-components';
-
+//import { Spinner } from '@chakra-ui/spinner';
 import { MetamaskActions, MetaMaskContext } from '../hooks';
 import {
   connectSnap,
@@ -128,7 +128,36 @@ const ErrorMessage = styled.div`
 
 
 const Index = () => {
+  const [hidden, isHidden] = useState(true);
 
+  
+useEffect(() => {
+  // get the proof request params for this popup
+   const params = new URLSearchParams(window.location.search)
+   const username = params.get('username')!;
+   if (username!=null) {
+     //getCommitment();
+    //dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation onboarded to chain" });
+
+    const fetchData = async () => {
+      // get the data from the api
+      isHidden(false);
+
+      await getCommitment();
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation onboarded to chain" });
+      isHidden(true);
+
+    }
+  
+    // call the function
+    const result = fetchData()
+      .catch(console.error);
+
+   }
+
+  
+  }, [])
+  
   const [state, dispatch] = useContext(MetaMaskContext);
 
   const isMetaMaskReady = isLocalSnap(defaultSnapOrigin)
@@ -162,8 +191,8 @@ const Index = () => {
   const handleGetCommitmentClick = async () => {
     try {
       await getTwitterID();
-      await getCommitment();
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation onboarded to chain" });
+      //await getCommitment();
+      //dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation onboarded to chain" });
     } catch (e) {
       console.error(e);
       dispatch({ type: MetamaskActions.SetError, payload: e });
@@ -196,13 +225,31 @@ const Index = () => {
 
   return (
     <Container>
+      
       <Heading>
         Onboard using <Span>Plurality</Span>
       </Heading>
       <Subtitle>
       Onboard your social profiles on chain
       </Subtitle>
+        {!hidden && (
+          <Message>
+          Connecting on chain...
+          {/*<Spinner size="xl" color='red.500'/>*/}
+          </Message>
+
+        )}
+
+        {state.infoMessage && (
+          <Message>
+            <b> {state.infoMessage}</b>
+          </Message>
+        )}
+
+
       <CardContainer>
+
+      
         {state.error && (
           <ErrorMessage>
             <b>An error happened:</b> {state.error.message}
@@ -274,13 +321,9 @@ const Index = () => {
             !shouldDisplayReconnectButton(state.installedSnap)
           }
         />
-                {state.infoMessage && (
-          <Message>
-            <b> {state.infoMessage}</b>
-          </Message>
-        )}
 
-<Card
+
+        <Card
           content={{
             title: 'Port profile to lens',
             description:
@@ -288,7 +331,7 @@ const Index = () => {
             button: (
               <PortToLens
                 onClick={portLensClick}
-                disabled={!state.installedSnap}
+                disabled={!state.installedSnap && !hidden}
               />
             ),
           }}
@@ -299,11 +342,7 @@ const Index = () => {
             !shouldDisplayReconnectButton(state.installedSnap)
           }
         />
-                {state.infoMessage && (
-          <Message>
-            <b> {state.infoMessage}</b>
-          </Message>
-        )}
+
 
         {/*<Notice>
           <p>

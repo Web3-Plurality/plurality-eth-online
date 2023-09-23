@@ -77,12 +77,12 @@ export const sendHello = async () => {
 export const getCommitment = async () => {
   let acceptance = await window.ethereum.request({
     method: 'wallet_invokeSnap',
-    params: { snapId: defaultSnapOrigin, request: { method: 'commitment_request', params: {source:"facebook"} }},
+    params: { snapId: defaultSnapOrigin, request: { method: 'commitment_request', params: {source:"twitter"} }},
   });
   if (acceptance) {
     let commitment = await window.ethereum.request({
       method: 'wallet_invokeSnap',
-      params: { snapId: defaultSnapOrigin, request: { method: 'commitment_fetch', params: {source:"facebook"} } },
+      params: { snapId: defaultSnapOrigin, request: { method: 'commitment_fetch', params: {source:"twitter"} } },
     });
     console.log(commitment);
     await createGroup();
@@ -99,7 +99,7 @@ export const getCommitment = async () => {
 export const getZkProof = async () : Promise<boolean> => {
  let identityString = await window.ethereum.request({
    method: 'wallet_invokeSnap',
-   params: { snapId: defaultSnapOrigin, request: { method: 'zkproof_request', params: {source:"facebook"} } },
+   params: { snapId: defaultSnapOrigin, request: { method: 'zkproof_request', params: {source:"twitter"} } },
  });
   console.log(identityString);
 
@@ -123,10 +123,14 @@ export const getZkProof = async () : Promise<boolean> => {
   const commitment=identity.commitment;
   console.log("Checking commitment: "+commitment);
 if (members.includes(commitment.toString())){
+  console.log("Membership proof verified");
   return true;
 }
 else {
+  console.log("Membership proof not verified");
+
   return false;
+
 }
   /*const fullProof = await generateProof(identity, group, groupId, signal, {
     zkeyFilePath: "./semaphore.zkey",

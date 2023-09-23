@@ -6,9 +6,9 @@ import { Root } from './src/Root';
 export const wrapRootElement: GatsbyBrowser['wrapRootElement'] = ({
   element,
 }) => (
-  <StrictMode>
+  //<StrictMode>
     <Root>{element}</Root>
-  </StrictMode>
+  //</StrictMode>
 );
 
 export const wrapPageElement: GatsbyBrowser['wrapPageElement'] = ({
