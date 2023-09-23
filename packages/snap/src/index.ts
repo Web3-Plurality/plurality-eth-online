@@ -1,34 +1,42 @@
 import { OnRpcRequestHandler } from '@metamask/snaps-types';
 import { panel, text } from '@metamask/snaps-ui';
 import { Identity } from "@semaphore-protocol/identity";
+import { Group } from "@semaphore-protocol/group";
+import { SemaphoreEthers } from "@semaphore-protocol/data";
+import { generateProof, FullProof } from "@semaphore-protocol/proof"
 
-const createIdentity = () : any => {
+import { addReputation, getReputation} from "./utils/snapStorage"; 
+//import { generateProofInSandbox } from './sandbox';
+
+const createIdentity = (_source: string) : any => {
   const identity = new Identity();
-  let id_obj={
-    _link: 'X', 
-    _commitment: identity.getCommitment().toString(), 
-    _trapdoor: identity.getTrapdoor().toString(),
-    _nullifier: identity.getNullifier().toString()
-  }
-    // Persist some data.
-  snap.request({
-    method: 'snap_manageState',
-    params: { operation: 'update', 
-    newState: id_obj
-    },
-  });
- // console.log(identity.getCommitment());
-  return id_obj;
+  addReputation(_source,identity.toString());
+  return identity;
 }
-const getSavedCommitment = async (): Promise<any> => {
-  //return 'abc';
-  const data = await snap.request({
-    method: 'snap_manageState',
-    params: { operation: 'get' },
+const getSavedCommitment = async (_source: string): Promise<string> => {
+  const data = await getReputation(_source);
+  const identity = new Identity(data.toString())
+  return identity.commitment.toString();
+}
+
+const getZKProof = async (_source: string): Promise<string> => {
+  const data = await getReputation(_source);
+  return data;
+  //TODO: The proof needs to be generated inside a sandbox since generateProof method uses an eval() function
+  // eval() is disallowed in SES environment of snap
+  
+  /*const identity = new Identity(data.toString());
+  const semaphoreEthers = new SemaphoreEthers("sepolia", {
+    address: "0xe8758638fD2E34f230b99e9b6D8587508B6D90EA",
+    startBlock: 0
   });
- // console.log(data?.toString());
-  return data!!._commitment;
-  //return 'abc';
+  const groupId = "000"
+  const members = await semaphoreEthers.getGroupMembers(groupId)
+  const group = new Group(groupId, 20, members);
+  const signal = 1;
+  const proof = await generateProofInSandbox(identity, group, groupId, signal);
+
+  return proof;*/
 }
 /**
  * Handle incoming JSON-RPC requests, sent through `wallet_invokeSnap`.
@@ -41,6 +49,9 @@ const getSavedCommitment = async (): Promise<any> => {
  * @throws If the request method is not valid for this snap.
  */
 export const onRpcRequest: OnRpcRequestHandler = ({ origin, request }) => {
+  let params = JSON.stringify(request.params);
+  let param = JSON.parse(params);
+  let source = param.source;
   switch (request.method) {
     case 'hello':
       return snap.request({
@@ -57,29 +68,33 @@ export const onRpcRequest: OnRpcRequestHandler = ({ origin, request }) => {
         },
       });
     case 'commitment_request':
+      let obj = createIdentity(source);
       return snap.request({
         method: 'snap_dialog',
         params: {
           type: 'confirmation',
           content: panel([
             text(`Created new identity commitment`),
-            text(`\nLinked Reputation: ` + createIdentity()._link),
-            text(`\nCommitment: ` + createIdentity()._commitment),
-            text(`\nTrapdoor: ` + createIdentity()._trapdoor),
-            text(`\nNullifier: ` + createIdentity()._nullifier)
+            text(`\nReputation from source: ` + source),
+            text(`\nCommitment: ` + obj.getCommitment()),
+            text(`\nTrapdoor: ` + obj.getTrapdoor()),
+            text(`\nNullifier: ` + obj.getNullifier())
           ]),
         },
-      });  
+      });
     case 'commitment_fetch':
       // At a later time, get the data stored.
-        const result=getSavedCommitment().then((a)=> {
-          return a;
-        });
+      let result =getSavedCommitment(source).then((a)=> {
+        return a;
+      });
+      return result;
+    case 'zkproof_request':
+      // At a later time, get the data stored.
+      let zkproof =getZKProof(source).then((result)=> {
         return result;
-      //return snap.request({
-      //  method: 'snap_manageState',
-      //  params: { operation: 'get' },
-      //});  
+      });
+      return zkproof;
+      
     default:
       throw new Error('Method not found.');
   }

@@ -16,7 +16,7 @@ const config: GatsbyConfig = {
         background_color: '#FFFFFF',
         display: 'standalone',
       },
-    },
+    }
   ],
 };
 

@@ -1,6 +1,13 @@
 import { MetaMaskInpageProvider } from '@metamask/providers';
 import { defaultSnapOrigin } from '../config';
 import { GetSnapsResponse, Snap } from '../types';
+import { createGroup, addMemberToGroup, verifyZKProofSentByUser } from './web3semaphore';
+
+import { Group } from "@semaphore-protocol/group";
+import { SemaphoreEthers } from "@semaphore-protocol/data";
+import { FullProof, generateProof } from "@semaphore-protocol/proof";
+import { Identity } from "@semaphore-protocol/identity";
+
 
 /**
  * Get the installed snaps in MetaMask.
@@ -64,27 +71,75 @@ export const sendHello = async () => {
 };
 
 /**
- * Invoke the "commitment_request" method from the example snap.
+ * Invoke the "commitment_request" & "commitment_request" method from the example snap.
  */
 
-export const sendCommitmentRequest = async () => {
-  await window.ethereum.request({
+export const getCommitment = async () => {
+  let acceptance = await window.ethereum.request({
     method: 'wallet_invokeSnap',
-    params: { snapId: defaultSnapOrigin, request: { method: 'commitment_request' } },
+    params: { snapId: defaultSnapOrigin, request: { method: 'commitment_request', params: {source:"facebook"} }},
   });
+  if (acceptance) {
+    let commitment = await window.ethereum.request({
+      method: 'wallet_invokeSnap',
+      params: { snapId: defaultSnapOrigin, request: { method: 'commitment_fetch', params: {source:"facebook"} } },
+    });
+    console.log(commitment);
+    await createGroup();
+    await addMemberToGroup(commitment);
+  }
+  else {
+    console.log("User rejected the request for commitment");
+  }
 };
 
 /** 
-* Invoke the "commitment_request" method from the example snap.
+* Invoke the "zkproof_request" method from the example snap.
 */
-export const fetchCommitment = async () => {
- const commitment = await window.ethereum.request({
+export const getZkProof = async () => {
+ let identityString = await window.ethereum.request({
    method: 'wallet_invokeSnap',
-   params: { snapId: defaultSnapOrigin, request: { method: 'commitment_fetch' } },
+   params: { snapId: defaultSnapOrigin, request: { method: 'zkproof_request', params: {source:"facebook"} } },
  });
-console.log(commitment);
-console.log(JSON.stringify(commitment));
-alert(JSON.stringify(commitment));
+  console.log(identityString);
+
+  // zk proof creation
+  //TODO: The following code block should be executed in snap 
+  const identity = new Identity(identityString!.toString());
+  const semaphoreEthers = new SemaphoreEthers("sepolia", {
+    address: process.env.REACT_APP_SEMAPHORE_IDENTITY_CONTRACT,
+    startBlock: 4269200
+  });
+  const groupId = process.env.REACT_APP_GROUP_ID!;
+  console.log("using group id: "+groupId);
+  const groupIds = await semaphoreEthers.getGroupIds()
+  console.log(groupIds);
+
+
+  const members = await semaphoreEthers.getGroupMembers(groupId);
+  console.log(members);
+  const group = new Group(groupId, 20, members);
+  const signal = 1;
+  const commitment=identity.commitment;
+  console.log("Checking commitment: "+commitment);
+if (members.includes(commitment.toString())){
+  alert("valid member");
+}
+else 
+alert("not valid");
+  /*const fullProof = await generateProof(identity, group, groupId, signal, {
+    zkeyFilePath: "./semaphore.zkey",
+    wasmFilePath: "./semaphore.wasm"
+})*/
+  //const proof = await generateProof(identity, group, groupId, signal);
+  //console.log(proof); 
+
+  // zk proof verification
+  /*const verified = await verifyZKProofSentByUser(proof);
+  if (verified)
+    alert("Proof is valid");
+  else 
+    alert ("Proof invalid");*/
 };
 
 

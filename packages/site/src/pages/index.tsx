@@ -6,8 +6,8 @@ import {
   getSnap,
   isLocalSnap,
   sendHello,
-  sendCommitmentRequest,
-  fetchCommitment,
+  getCommitment,
+  getZkProof,
   shouldDisplayReconnectButton,
 } from '../utils';
 import {
@@ -16,7 +16,7 @@ import {
   ReconnectButton,
   SendHelloButton,
   CommitmentButton,
-  CommitmentFetchButton,
+  ZKProofButton,
   Card,
 } from '../components';
 import { defaultSnapOrigin } from '../config';
@@ -136,18 +136,18 @@ const Index = () => {
     }
   };
 
-  const handleSendCommitmentClick = async () => {
+  const handleGetCommitmentClick = async () => {
     try {
-      await sendCommitmentRequest();
+      await getCommitment();
     } catch (e) {
       console.error(e);
       dispatch({ type: MetamaskActions.SetError, payload: e });
     }
   };
 
-  const handleFetchCommitmentClick = async () => {
+  const handleZkProofClick = async () => {
     try {
-      await fetchCommitment();
+      await getZkProof();
     } catch (e) {
       console.error(e);
       dispatch({ type: MetamaskActions.SetError, payload: e });
@@ -232,12 +232,12 @@ const Index = () => {
         />
         <Card
           content={{
-            title: 'Ask for commitment',
+            title: 'Get commitment for X',
             description:
               'Request identity commitment within a confirmation screen in MetaMask.',
             button: (
               <CommitmentButton
-                onClick={handleSendCommitmentClick}
+                onClick={handleGetCommitmentClick}
                 disabled={!state.installedSnap}
               />
             ),
@@ -252,12 +252,12 @@ const Index = () => {
 
         <Card
           content={{
-            title: 'Fetch commitment',
+            title: 'Get zk-proof for X',
             description:
               'Fetch identity commitment within a confirmation screen in MetaMask.',
             button: (
-              <CommitmentFetchButton
-                onClick={handleFetchCommitmentClick}
+              <ZKProofButton
+                onClick={handleZkProofClick}
                 disabled={!state.installedSnap}
               />
             ),
@@ -269,6 +269,7 @@ const Index = () => {
             !shouldDisplayReconnectButton(state.installedSnap)
           }
         />
+
         <Notice>
           <p>
             Please note that the <b>snap.manifest.json</b> and{' '}
