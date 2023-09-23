@@ -1,6 +1,8 @@
 import { useContext } from 'react';
 import styled from 'styled-components';
 import { MetamaskActions, MetaMaskContext } from '../hooks';
+import { ModalBox } from "../components/Modal";
+
 import {
   connectSnap,
   getSnap,
@@ -20,6 +22,8 @@ import {
   Card,
 } from '../components';
 import { defaultSnapOrigin } from '../config';
+import { getTwitterID } from '../utils/oauth';
+
 
 const Container = styled.div`
   display: flex;
@@ -86,10 +90,27 @@ const Notice = styled.div`
     padding: 1.6rem;
   }
 `;
-
+const Message = styled.div`
+background-color: ${({ theme }) => theme.colors.background.alternative};
+border: 1px solid ${({ theme }) => theme.colors.border.default};
+color: ${({ theme }) => theme.colors.primary.default};
+border-radius: ${({ theme }) => theme.radii.default};
+  padding: 2.4rem;
+  margin-bottom: 2.4rem;
+  margin-top: 2.4rem;
+  max-width: 60rem;
+  width: 100%;
+  text-align: center;
+  ${({ theme }) => theme.mediaQueries.small} {
+    padding: 1.6rem;
+    margin-bottom: 1.2rem;
+    margin-top: 1.2rem;
+    max-width: 100%;
+  }
+`;
 const ErrorMessage = styled.div`
   background-color: ${({ theme }) => theme.colors.error.muted};
-  border: 1px solid ${({ theme }) => theme.colors.error.default};
+  //border: 1px solid ${({ theme }) => theme.colors.error.default};
   color: ${({ theme }) => theme.colors.error.alternative};
   border-radius: ${({ theme }) => theme.radii.default};
   padding: 2.4rem;
@@ -138,7 +159,9 @@ const Index = () => {
 
   const handleGetCommitmentClick = async () => {
     try {
+      await getTwitterID();
       await getCommitment();
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation onboarded to chain" });
     } catch (e) {
       console.error(e);
       dispatch({ type: MetamaskActions.SetError, payload: e });
@@ -147,7 +170,12 @@ const Index = () => {
 
   const handleZkProofClick = async () => {
     try {
-      await getZkProof();
+      const result = await getZkProof();
+      if (result) {
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation ownership proved" });
+      }
+      else 
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation invalid" });
     } catch (e) {
       console.error(e);
       dispatch({ type: MetamaskActions.SetError, payload: e });
@@ -157,10 +185,10 @@ const Index = () => {
   return (
     <Container>
       <Heading>
-        Welcome to <Span>template-snap</Span>
+        Onboard using <Span>Plurality</Span>
       </Heading>
       <Subtitle>
-        Get started by editing <code>src/index.ts</code>
+      Onboard your social profiles on chain
       </Subtitle>
       <CardContainer>
         {state.error && (
@@ -195,7 +223,7 @@ const Index = () => {
             disabled={!isMetaMaskReady}
           />
         )}
-        {shouldDisplayReconnectButton(state.installedSnap) && (
+        {/*{shouldDisplayReconnectButton(state.installedSnap) && (
           <Card
             content={{
               title: 'Reconnect',
@@ -229,12 +257,12 @@ const Index = () => {
             Boolean(state.installedSnap) &&
             !shouldDisplayReconnectButton(state.installedSnap)
           }
-        />
+        />*/}
         <Card
           content={{
-            title: 'Get commitment for X',
+            title: 'Connect Reputation for X',
             description:
-              'Request identity commitment within a confirmation screen in MetaMask.',
+              'Register your X reputation on-chain using MetaMask.',
             button: (
               <CommitmentButton
                 onClick={handleGetCommitmentClick}
@@ -252,9 +280,9 @@ const Index = () => {
 
         <Card
           content={{
-            title: 'Get zk-proof for X',
+            title: 'Prove Reputation for X',
             description:
-              'Fetch identity commitment within a confirmation screen in MetaMask.',
+              'Prove your X reputation using secrets stored in MetaMask.',
             button: (
               <ZKProofButton
                 onClick={handleZkProofClick}
@@ -269,15 +297,20 @@ const Index = () => {
             !shouldDisplayReconnectButton(state.installedSnap)
           }
         />
+                {state.infoMessage && (
+          <Message>
+            <b> {state.infoMessage}</b>
+          </Message>
+        )}
 
-        <Notice>
+        {/*<Notice>
           <p>
             Please note that the <b>snap.manifest.json</b> and{' '}
             <b>package.json</b> must be located in the server root directory and
             the bundle must be hosted at the location specified by the location
             field.
           </p>
-        </Notice>
+        </Notice>*/}
       </CardContainer>
     </Container>
   );

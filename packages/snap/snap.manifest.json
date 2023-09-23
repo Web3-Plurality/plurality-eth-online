@@ -1,13 +1,13 @@
 {
   "version": "0.1.0",
-  "description": "An example Snap written in TypeScript.",
-  "proposedName": "TypeScript Example Snap",
+  "description": "Onboard your socials on chain",
+  "proposedName": "Plurality",
   "repository": {
     "type": "git",
     "url": "https://github.com/MetaMask/template-snap-monorepo.git"
   },
   "source": {
-    "shasum": "0JaruGhYKMEuXDbSnDB8kKXgwDcxDx3CVmpbU3Z7/vs=",
+    "shasum": "hvkmT/RMgdjolr0iBI3Y2sMy4jxlW5MoKFFSG7VU+RI=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",

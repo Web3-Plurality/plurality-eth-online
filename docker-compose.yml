@@ -1,0 +1,75 @@
+version: '3.9'
+services:
+  #######
+  # Verifier Backend
+  #######
+  plurality-verifier-be:
+    container_name: plurality-verifier-be
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile
+    environment:
+      PORT: ${VERIFIER_BACKEND_PORT}
+      BASE_URL: 'http://127.0.0.1:5000'
+      #BASE_URL: ${VERIFIER_BACKEND_URL}
+      TWITTER_CLIENT_ID: ${TWITTER_CLIENT_ID}
+      TWITTER_CLIENT_SECRET: ${TWITTER_CLIENT_SECRET}
+    ports:
+      - ${VERIFIER_BACKEND_PORT}:${VERIFIER_BACKEND_PORT}
+    restart: always
+    networks:
+      - plurality-verifier-network
+  #######
+  # Verifier UI
+  #######
+  plurality-verifier-ui:
+    container_name: plurality-verifier-ui
+    build:
+      context: ./packages/site
+      dockerfile: Dockerfile
+    environment:
+      REACT_APP_SEMAPHORE_IDENTITY_CONTRACT: ${SEMAPHORE_IDENTITY_CONTRACT}
+      REACT_APP_ETHEREUM_NETWORK: ${ETHEREUM_NETWORK}
+      REACT_APP_INFURA_API_KEY: ${INFURA_API_KEY}
+      REACT_APP_SIGNER_PRIVATE_KEY: ${VERIFIER_WALLET_PRIVATE_KEY}
+      REACT_APP_GROUP_ID: ${GROUP_ID}
+      REACT_APP_API_BASE_URL: ${VERIFIER_BACKEND_URL}
+    ports:
+      - ${VERIFIER_UI_PORT}:${VERIFIER_UI_PORT}
+    depends_on:
+      - plurality-verifier-be
+    restart: always
+    networks:
+      - plurality-verifier-network
+  #######
+  # Plurality Snap
+  #######
+  plurality-snap:
+    container_name: plurality-snap
+    build:
+      context: ./packages/snap
+      dockerfile: Dockerfile
+    ports:
+      - ${SNAP_PORT}:${SNAP_PORT}
+    #depends_on:
+    #  - plurality-verifier-be
+    restart: always
+    networks:
+      - plurality-verifier-network
+  #######
+  # Ingress
+  #######
+  # ingress:
+  #   container_name: ingress
+  #   image: nginx:1.15.10-alpine
+  #   ports:
+  #     - target: 80
+  #       published: 8080 # walletkit and issuer ui publish port
+  #       protocol: tcp
+  #       mode: host
+  #   volumes:
+  #     - ./ingress.conf:/etc/nginx/conf.d/default.conf # API gateway configuration
+  #   networks:
+  #     - plurality-verifier-network
+networks:
+  plurality-verifier-network:

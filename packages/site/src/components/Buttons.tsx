@@ -99,11 +99,11 @@ export const SendHelloButton = (props: ComponentProps<typeof Button>) => {
 };
 
 export const CommitmentButton = (props: ComponentProps<typeof Button>) => {
-  return <Button {...props}>Get commitment</Button>;
+  return <Button {...props}>Connect reputation</Button>;
 };
 
 export const ZKProofButton = (props: ComponentProps<typeof Button>) => {
-  return <Button {...props}>Get zk proof</Button>;
+  return <Button {...props}>Prove reputation</Button>;
 };
 
 export const HeaderButtons = ({

@@ -96,7 +96,7 @@ export const getCommitment = async () => {
 /** 
 * Invoke the "zkproof_request" method from the example snap.
 */
-export const getZkProof = async () => {
+export const getZkProof = async () : Promise<boolean> => {
  let identityString = await window.ethereum.request({
    method: 'wallet_invokeSnap',
    params: { snapId: defaultSnapOrigin, request: { method: 'zkproof_request', params: {source:"facebook"} } },
@@ -123,10 +123,11 @@ export const getZkProof = async () => {
   const commitment=identity.commitment;
   console.log("Checking commitment: "+commitment);
 if (members.includes(commitment.toString())){
-  alert("valid member");
+  return true;
 }
-else 
-alert("not valid");
+else {
+  return false;
+}
   /*const fullProof = await generateProof(identity, group, groupId, signal, {
     zkeyFilePath: "./semaphore.zkey",
     wasmFilePath: "./semaphore.wasm"

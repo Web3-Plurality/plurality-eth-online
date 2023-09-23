@@ -95,7 +95,6 @@ export const createGroup = async () => {
     });
     // The transaction is now on chain!
     console.log(`addMemberToGroup Mined in block ${receipt.blockNumber}`);
-    
     return receipt;
   };
 
