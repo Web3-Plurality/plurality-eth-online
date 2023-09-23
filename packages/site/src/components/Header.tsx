@@ -1,11 +1,12 @@
 //"use client";
-import { useContext } from 'react';
+import { FormEvent, useContext, useState } from 'react';
 import styled, { useTheme } from 'styled-components';
 import { MetamaskActions, MetaMaskContext } from '../hooks';
 import { connectSnap, getThemePreference, getSnap } from '../utils';
-import { HeaderButtons, SignInLensButton } from './Buttons';
+import { HeaderButtons } from './Buttons';
 import { SnapLogo } from './SnapLogo';
 import { Toggle } from './Toggle';
+import { isValidHandle, useCreateProfile, DuplicatedHandleError } from '@lens-protocol/react-web';
 
 import {
   useWalletLogin,
@@ -59,71 +60,156 @@ const Button = styled.button`
   }
 `;
 
-let walletHandle = "";
-export default function Authentication() {
-  const { execute: login, isPending: isLoginPending } = useWalletLogin();
-  const { data: wallet, loading } = useActiveProfile();
-  const { execute: logout } = useWalletLogout();
-  const { isConnected } = useAccount();
-  const { disconnectAsync } = useDisconnect();
+ 
+  function CreateProfile() {
+    const { data: wallet, loading } = useActiveProfile();
+    const { execute, isPending } = useCreateProfile();
+ 
+    const onClick = async () => {
+      let handle = window.prompt("Create your lens handle");
+      if (handle == null || handle == "") {
+        handle = "";
+      }  
+      const result = await execute({ handle });
+ 
+      if (result.isSuccess()) {
+        alert("Profile created!"+ result.value);
+        return;
+      }
+ 
+      switch (result.error.constructor) {
+        case DuplicatedHandleError:
+          console.log("Handle already taken");
+ 
+        default:
+          alert(`Could not create profile due to: ${result.error.message}`);
+      }
+    };
+ 
+    return (
+      <div>
+          <div>
+            <Button disabled={isPending} onClick={onClick}>
+              Register with lens
+            </Button>
+            </div>
+      </div>
+    );
+  }
+  
+  export function Authentication() {
+    const { execute: login, isPending: isLoginPending } = useWalletLogin();
+    const { data: wallet, loading } = useActiveProfile();
+    const { execute: logout } = useWalletLogout();
+    const { isConnected } = useAccount();
+    const { disconnectAsync } = useDisconnect();
+    const { execute, isPending } = useCreateProfile();
 
-  const { connectAsync } = useConnect({
-    connector: new InjectedConnector(),
-  });
+  
+    const [registerProfile, isRegisterProfile] = useState(false);
+    const { connectAsync } = useConnect({
+      connector: new InjectedConnector(),
+    });
 
-  const onLoginClick = async () => {
-    if (isConnected) {
-      await disconnectAsync();
-    }
+    const onClick = async () => {
+      let handle = window.prompt("Create your lens handle");
+      if (handle == null || handle == "") {
+        handle = "";
+      }  
+      const result = await execute({ handle });
+ 
+      if (result.isSuccess()) {
+        alert("Profile created!");
+        alert("Please refresh the browser and sign in!");
+        isRegisterProfile(false);
+        return;
+      }
+ 
+      switch (result.error.constructor) {
+        case DuplicatedHandleError:
+          console.log("Handle already taken");
+          isRegisterProfile(false);
 
-    const { connector } = await connectAsync();
+        default:
+          alert(`Could not create profile due to: ${result.error.message}`);
+          isRegisterProfile(false);
 
-    if (connector instanceof InjectedConnector) {
-      const walletClient = await connector.getWalletClient();
-
-      await login({
-        address: walletClient.account.address,
-      });
-    }
-  };
-  //walletHandle = wallet?.handle!;
-  return (
-    <div >
-      {loading && <p>Loading...</p>}
-    
-      {!wallet && !loading && (
-        <Button
-          disabled={isLoginPending}
-          onClick={onLoginClick}
-        >
-          Sign in
-        </Button>
-        
-      )}
+      }
+    };
+  
+    const onLoginClick = async () => {
+      if (isConnected) {
+        await disconnectAsync();
+      }
+  
+      const { connector } = await connectAsync();
+  
+      if (connector instanceof InjectedConnector) {
+        const walletClient = await connector.getWalletClient();
+  
+        const result = await login({
+          address: walletClient.account.address,
+        });
+        if (result.isSuccess()) {
+          if (result.value == null)
+          {
+            isRegisterProfile(true);
+            alert("No lens profile found. Please register first");
+          }
+        } else {
+          alert(result.error.message);
+        }
+      }
+    };
+  
+    return (
+      <div >
+  
+        {loading && <p>Loading...</p>}
       
-      {wallet && !loading && (
-        <div>
-          {/*<p>{wallet.handle}</p>*/}
-          <Button onClick={logout}>
-            Sign out
+        {!wallet && !loading && !registerProfile && (
+          <Button
+            disabled={isLoginPending}
+            onClick={onLoginClick}
+          >
+            Sign in with lens
           </Button>
+          
+        )}
+        
+        {wallet && !loading && (
+          <div>
+            <Button onClick={logout}>
+              Sign out
+            </Button>
+            </div>
+        )}
+
+        {registerProfile && (
+          <div>
+            <Button disabled={isPending} onClick={onClick}>
+              Register with lens
+            </Button>
           </div>
-      )}
-    </div>
-  );
-}
-
-
+        )}
+      </div>
+    );
+  }
+   
 export const Header = ({
   handleToggleClick,
 }: {
   handleToggleClick(): void;
 }) => {
   const { data: wallet, loading } = useActiveProfile();
+  //const [lensSignedIn, isLensSignedIn] = useState(false);
   const lensHandle = wallet?.handle.split(".");
   let lensProfile = "";
   if (lensHandle)
+  {
     lensProfile = "https://testnet.lenster.xyz/u/"+lensHandle![0];
+    //isLensSignedIn(true);
+  }
   const theme = useTheme();
   const [state, dispatch] = useContext(MetaMaskContext);
 
@@ -156,6 +242,7 @@ export const Header = ({
           onToggle={handleToggleClick}
           defaultChecked={getThemePreference()}
         />
+        &nbsp;
         <HeaderButtons state={state} onConnectClick={handleConnectClick} />
         &nbsp;
         <div><Authentication /></div>

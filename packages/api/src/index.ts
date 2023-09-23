@@ -9,6 +9,7 @@ import passport from "passport";
 
 import swaggerUi from "swagger-ui-express";
 import * as swaggerDocument from "./swagger.json";
+import { permawebRouter } from './controllers/PermawebUploadController';
 
 
 dotenv.config();
@@ -20,10 +21,12 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
+//app.use(express.json());
 app.use(passport.initialize());
 app.use(session({ secret: 'keyboard cat', resave: false, saveUninitialized: true }));
 app.use("/oauth-twitter", twitterRouter);
+app.use("/permaweb", permawebRouter);
+
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 

@@ -22,6 +22,9 @@ import {
 } from '../components';
 import { defaultSnapOrigin } from '../config';
 import { getTwitterID } from '../utils/oauth';
+import { ContentFocus, useActiveProfile, useCreatePost, useUpdateProfileDetails, useWalletLogin, useWalletLogout } from '@lens-protocol/react-web';
+import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { InjectedConnector } from "wagmi/connectors/injected";
 
   
 const Container = styled.div`
@@ -179,19 +182,9 @@ useEffect(() => {
     }
   };
 
-  const handleSendHelloClick = async () => {
-    try {
-      await sendHello();
-    } catch (e) {
-      console.error(e);
-      dispatch({ type: MetamaskActions.SetError, payload: e });
-    }
-  };
-
   const handleGetCommitmentClick = async () => {
     try {
       await getTwitterID();
-      //await getCommitment();
       //dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation onboarded to chain" });
     } catch (e) {
       console.error(e);
@@ -212,10 +205,79 @@ useEffect(() => {
       dispatch({ type: MetamaskActions.SetError, payload: e });
     }
   };
+  
+  const { data: publisher, loading } = useActiveProfile();
+  const { execute: create, error, isPending } = useCreatePost({ publisher: publisher!, upload: uploadJson });
+  const { execute: update, error: updateError, isPending: isUpdatePending } = useUpdateProfileDetails({
+    profile: publisher!,
+    upload: uploadJson
+  });
+
+  async function uploadJson(data: unknown){
+    try {
+      console.log("uploading post with data: "+ JSON.stringify(data));
+      const response = await fetch(process.env.REACT_APP_API_BASE_URL+'/permaweb/', {
+        method: 'POST',
+        body: JSON.stringify(data), 
+        headers: new Headers({'content-type': 'application/json'})
+      })
+      console.log("got response from api");
+
+      const json = await response.json()
+      console.log(json.url);
+
+      return json.url
+    } catch(err) {
+      console.log({ err })
+    }
+  }
+  async function updateProfile(){
+    try {
+      console.log("updating profile");
+      const params = new URLSearchParams(window.location.search)
+      const username = params.get('username')!;
+
+      const name = username;
+      const bio = "Hi, I'm " + username;
+      const attributes = {
+        location: "earth",
+        website: "",
+        x: "https://x.com/"+username,
+      };
+      await update({ name, bio, attributes });
+      console.log("Profile updated");
+    } catch(err) {
+      console.log({ err })
+    }
+  }
+
+  async function createPost() {
+    const params = new URLSearchParams(window.location.search)
+    const username = params.get('username')!;
+    const platform = params.get('id_platform')!;
+
+
+    const postContent = "Gm folks! \n"+
+                        "I just connected my " + platform + " with username "+ username + " \n" +
+                        "Let's make social media sovereign!"; 
+    try {
+    const result = await create({
+      content: postContent,
+      contentFocus: ContentFocus.TEXT_ONLY,
+      locale: 'en',
+    })
+  }
+  catch(err) {
+    console.log("err...."+ err);
+    console.log(error);
+  }
+    //console.log("Response from post creation: "+ result);
+  }
 
   const portLensClick = async () => {
     try {
-     // TO BE IMPLEMENTED
+      await createPost();
+      await updateProfile();
     }
     catch (e) {
       console.error(e);
@@ -331,7 +393,7 @@ useEffect(() => {
             button: (
               <PortToLens
                 onClick={portLensClick}
-                disabled={!state.installedSnap && !hidden}
+                disabled={!state.installedSnap && !hidden }
               />
             ),
           }}
