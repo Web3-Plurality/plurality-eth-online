@@ -1,8 +1,7 @@
 import { useContext } from 'react';
 import styled from 'styled-components';
-import { MetamaskActions, MetaMaskContext } from '../hooks';
-import { ModalBox } from "../components/Modal";
 
+import { MetamaskActions, MetaMaskContext } from '../hooks';
 import {
   connectSnap,
   getSnap,
@@ -16,7 +15,7 @@ import {
   ConnectButton,
   InstallFlaskButton,
   ReconnectButton,
-  SendHelloButton,
+  PortToLens,
   CommitmentButton,
   ZKProofButton,
   Card,
@@ -24,7 +23,7 @@ import {
 import { defaultSnapOrigin } from '../config';
 import { getTwitterID } from '../utils/oauth';
 
-
+  
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -126,7 +125,10 @@ const ErrorMessage = styled.div`
   }
 `;
 
+
+
 const Index = () => {
+
   const [state, dispatch] = useContext(MetaMaskContext);
 
   const isMetaMaskReady = isLocalSnap(defaultSnapOrigin)
@@ -182,6 +184,16 @@ const Index = () => {
     }
   };
 
+  const portLensClick = async () => {
+    try {
+     // TO BE IMPLEMENTED
+    }
+    catch (e) {
+      console.error(e);
+      dispatch({ type: MetamaskActions.SetError, payload: e });
+    } 
+  };
+
   return (
     <Container>
       <Heading>
@@ -223,41 +235,6 @@ const Index = () => {
             disabled={!isMetaMaskReady}
           />
         )}
-        {/*{shouldDisplayReconnectButton(state.installedSnap) && (
-          <Card
-            content={{
-              title: 'Reconnect',
-              description:
-                'While connected to a local running snap this button will always be displayed in order to update the snap if a change is made.',
-              button: (
-                <ReconnectButton
-                  onClick={handleConnectClick}
-                  disabled={!state.installedSnap}
-                />
-              ),
-            }}
-            disabled={!state.installedSnap}
-          />
-        )}
-        <Card
-          content={{
-            title: 'Send Hello message',
-            description:
-              'Display a custom message within a confirmation screen in MetaMask.',
-            button: (
-              <SendHelloButton
-                onClick={handleSendHelloClick}
-                disabled={!state.installedSnap}
-              />
-            ),
-          }}
-          disabled={!state.installedSnap}
-          fullWidth={
-            isMetaMaskReady &&
-            Boolean(state.installedSnap) &&
-            !shouldDisplayReconnectButton(state.installedSnap)
-          }
-        />*/}
         <Card
           content={{
             title: 'Connect Reputation for X',
@@ -286,6 +263,31 @@ const Index = () => {
             button: (
               <ZKProofButton
                 onClick={handleZkProofClick}
+                disabled={!state.installedSnap}
+              />
+            ),
+          }}
+          disabled={!state.installedSnap}
+          fullWidth={
+            isMetaMaskReady &&
+            Boolean(state.installedSnap) &&
+            !shouldDisplayReconnectButton(state.installedSnap)
+          }
+        />
+                {state.infoMessage && (
+          <Message>
+            <b> {state.infoMessage}</b>
+          </Message>
+        )}
+
+<Card
+          content={{
+            title: 'Port profile to lens',
+            description:
+              'Port your profile to lens.',
+            button: (
+              <PortToLens
+                onClick={portLensClick}
                 disabled={!state.installedSnap}
               />
             ),

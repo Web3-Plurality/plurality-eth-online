@@ -3,7 +3,6 @@
 import Web3 from 'web3';
 
 import SemaphoreIdentity from '../semaphore_artifacts/SemaphoreIdentity.json';
-import { ethers } from "ethers";
 import { Contract } from 'web3-eth-contract';
 import { Account } from 'web3-core';
 

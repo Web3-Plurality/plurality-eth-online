@@ -1,10 +1,21 @@
+//"use client";
 import { useContext } from 'react';
 import styled, { useTheme } from 'styled-components';
 import { MetamaskActions, MetaMaskContext } from '../hooks';
 import { connectSnap, getThemePreference, getSnap } from '../utils';
-import { HeaderButtons } from './Buttons';
+import { HeaderButtons, SignInLensButton } from './Buttons';
 import { SnapLogo } from './SnapLogo';
 import { Toggle } from './Toggle';
+
+import {
+  useWalletLogin,
+  useWalletLogout,
+  useActiveProfile,
+} from "@lens-protocol/react-web";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { InjectedConnector } from "wagmi/connectors/injected";
+
+
 
 const HeaderWrapper = styled.header`
   display: flex;
@@ -37,11 +48,82 @@ const RightContainer = styled.div`
   align-items: center;
 `;
 
+const Button = styled.button`
+  display: flex;
+  align-self: flex-start;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  ${({ theme }) => theme.mediaQueries.small} {
+    width: 100%;
+  }
+`;
+
+let walletHandle = "";
+export default function Authentication() {
+  const { execute: login, isPending: isLoginPending } = useWalletLogin();
+  const { data: wallet, loading } = useActiveProfile();
+  const { execute: logout } = useWalletLogout();
+  const { isConnected } = useAccount();
+  const { disconnectAsync } = useDisconnect();
+
+  const { connectAsync } = useConnect({
+    connector: new InjectedConnector(),
+  });
+
+  const onLoginClick = async () => {
+    if (isConnected) {
+      await disconnectAsync();
+    }
+
+    const { connector } = await connectAsync();
+
+    if (connector instanceof InjectedConnector) {
+      const walletClient = await connector.getWalletClient();
+
+      await login({
+        address: walletClient.account.address,
+      });
+    }
+  };
+  //walletHandle = wallet?.handle!;
+  return (
+    <div >
+      {loading && <p>Loading...</p>}
+    
+      {!wallet && !loading && (
+        <Button
+          disabled={isLoginPending}
+          onClick={onLoginClick}
+        >
+          Sign in
+        </Button>
+        
+      )}
+      
+      {wallet && !loading && (
+        <div>
+          {/*<p>{wallet.handle}</p>*/}
+          <Button onClick={logout}>
+            Sign out
+          </Button>
+          </div>
+      )}
+    </div>
+  );
+}
+
+
 export const Header = ({
   handleToggleClick,
 }: {
   handleToggleClick(): void;
 }) => {
+  const { data: wallet, loading } = useActiveProfile();
+  const lensHandle = wallet?.handle.split(".");
+  let lensProfile = "";
+  if (lensHandle)
+    lensProfile = "https://testnet.lenster.xyz/u/"+lensHandle![0];
   const theme = useTheme();
   const [state, dispatch] = useContext(MetaMaskContext);
 
@@ -59,6 +141,7 @@ export const Header = ({
       dispatch({ type: MetamaskActions.SetError, payload: e });
     }
   };
+  
   return (
     <HeaderWrapper>
       <LogoWrapper>
@@ -66,11 +149,17 @@ export const Header = ({
         <Title>Plurality</Title>
       </LogoWrapper>
       <RightContainer>
+        <a href={lensProfile}><b> {lensHandle} </b></a>
+        &nbsp;
+        &nbsp;
         <Toggle
           onToggle={handleToggleClick}
           defaultChecked={getThemePreference()}
         />
         <HeaderButtons state={state} onConnectClick={handleConnectClick} />
+        &nbsp;
+        <div><Authentication /></div>
+
       </RightContainer>
     </HeaderWrapper>
   );

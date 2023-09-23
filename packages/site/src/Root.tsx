@@ -1,8 +1,41 @@
+"use client";
+//import "./globals.css";
+import { polygonMumbai, polygon } from "wagmi/chains";
+import { configureChains, createConfig, WagmiConfig } from "wagmi";
+import { publicProvider } from "wagmi/providers/public";
+import { InjectedConnector } from "wagmi/connectors/injected";
+import { LensProvider, LensConfig, production, development } from "@lens-protocol/react-web";
+import { bindings as wagmiBindings } from "@lens-protocol/wagmi";
+
 import { createContext, FunctionComponent, ReactNode, useState } from 'react';
 import { ThemeProvider } from 'styled-components';
 import { getThemePreference, setLocalStorage } from './utils';
 import { dark, light } from './config/theme';
 import { MetaMaskProvider } from './hooks';
+
+const { publicClient, webSocketPublicClient } = configureChains(
+  [polygonMumbai, polygon],
+  //[polygonMumbai],
+  [publicProvider()]
+);
+
+const config = createConfig({
+  autoConnect: true,
+  publicClient,
+  webSocketPublicClient,
+  connectors: [
+    new InjectedConnector({
+      options: {
+        shimDisconnect: false,
+      },
+    }),
+  ],
+});
+
+const lensConfig: LensConfig = {
+  bindings: wagmiBindings(),
+  environment: development,
+};
 
 export type RootProps = {
   children: ReactNode;
@@ -23,10 +56,14 @@ export const Root: FunctionComponent<RootProps> = ({ children }) => {
   };
 
   return (
+    <WagmiConfig config={config}>
+    <LensProvider config={lensConfig}>
     <ToggleThemeContext.Provider value={toggleTheme}>
       <ThemeProvider theme={darkTheme ? dark : light}>
         <MetaMaskProvider>{children}</MetaMaskProvider>
       </ThemeProvider>
     </ToggleThemeContext.Provider>
+    </LensProvider>
+  </WagmiConfig>
   );
 };

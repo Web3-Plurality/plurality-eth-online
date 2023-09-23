@@ -94,8 +94,8 @@ export const ReconnectButton = (props: ComponentProps<typeof Button>) => {
   );
 };
 
-export const SendHelloButton = (props: ComponentProps<typeof Button>) => {
-  return <Button {...props}>Send message</Button>;
+export const PortToLens = (props: ComponentProps<typeof Button>) => {
+  return <Button {...props}>Port profile</Button>;
 };
 
 export const CommitmentButton = (props: ComponentProps<typeof Button>) => {
