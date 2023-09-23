@@ -1,12 +1,10 @@
 import { useContext, useEffect, useState } from 'react';
 import styled from 'styled-components';
-//import { Spinner } from '@chakra-ui/spinner';
 import { MetamaskActions, MetaMaskContext } from '../hooks';
 import {
   connectSnap,
   getSnap,
   isLocalSnap,
-  sendHello,
   getCommitment,
   getZkProof,
   shouldDisplayReconnectButton,
@@ -14,17 +12,14 @@ import {
 import {
   ConnectButton,
   InstallFlaskButton,
-  ReconnectButton,
-  PortToLens,
-  CommitmentButton,
-  ZKProofButton,
   Card,
 } from '../components';
 import { defaultSnapOrigin } from '../config';
 import { getTwitterID } from '../utils/oauth';
-import { ContentFocus, useActiveProfile, useCreatePost, useUpdateProfileDetails, useWalletLogin, useWalletLogout } from '@lens-protocol/react-web';
-import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { InjectedConnector } from "wagmi/connectors/injected";
+import { ContentFocus, DuplicatedHandleError, ProfileOwnedByMe, useActiveProfile, useActiveWallet, useCreatePost, useCreateProfile, useUpdateProfileDetails, useWalletLogin, useWalletLogout } from '@lens-protocol/react-web';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { InjectedConnector } from 'wagmi/connectors/injected';
+import { Button } from 'react-bootstrap';
 
   
 const Container = styled.div`
@@ -128,91 +123,154 @@ const ErrorMessage = styled.div`
   }
 `;
 
+export function Authentication() {
+  const { execute: login, isPending: isLoginPending } = useWalletLogin();
+  const { data: wallet, loading } = useActiveProfile();
+  const { execute: logout } = useWalletLogout();
+  const { isConnected } = useAccount();
+  const { disconnectAsync } = useDisconnect();
+  const { execute, isPending } = useCreateProfile();
 
+  async function createLensProfile (handle:string): Promise<string>  {
+    try {
+      console.log("Trying to create lens profile with handle: "+handle);
+      const result = await execute({ handle });
+ 
+      if (result.isSuccess()) {
+        //alert("Please refresh the browser to sign in!");
+        window.location.reload();
+        isRegisterProfile(false);
+        return "SUCCESS";
+      }
+ 
+      switch (result.error.constructor) {
+        case DuplicatedHandleError:
+          console.log("Handle already taken");
+          isRegisterProfile(false);
+          return "DUPLICATE"
+        default:
+          alert(`Could not create profile due to: ${result.error.message}`);
+          isRegisterProfile(false);
+          return "ERROR";
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return "";
+  };
+
+  const [registerProfile, isRegisterProfile] = useState(false);
+  const { connectAsync } = useConnect({
+    connector: new InjectedConnector(),
+  });
+
+  const onClick = async () => {
+    let handle = window.prompt("Create your lens handle");
+    if (handle == null || handle == "") {
+      handle = "";
+    }  
+    const result = await execute({ handle });
+
+    if (result.isSuccess()) {
+      alert("Profile created!");
+      alert("Please refresh the browser and sign in!");
+      isRegisterProfile(false);
+      return;
+    }
+
+    switch (result.error.constructor) {
+      case DuplicatedHandleError:
+        console.log("Handle already taken");
+        isRegisterProfile(false);
+
+      default:
+        alert(`Could not create profile due to: ${result.error.message}`);
+        isRegisterProfile(false);
+
+    }
+  };
+
+  const onLoginClick = async () => {
+    if (isConnected) {
+      await disconnectAsync();
+    }
+
+    const { connector } = await connectAsync();
+
+    if (connector instanceof InjectedConnector) {
+      const walletClient = await connector.getWalletClient();
+
+      const result = await login({
+        address: walletClient.account.address,
+      });
+      if (result.isSuccess()) {
+        if (result.value == null)
+        {
+          isRegisterProfile(true);
+          alert("No lens profile found. Creating one..");
+            const params = new URLSearchParams(window.location.search)
+            let username = params.get('username')!;
+            const response = await createLensProfile(username);
+            if (response == "DUPLICATE")
+            {
+              alert("The lens handle matching your twitter username is already taken. Trying a new random handle");
+              const min = 1;
+              const max = 100000;
+              let rand = min + Math.floor(Math.random() * (max - min));
+              username=username+rand;
+              await createLensProfile(username);
+            }
+        }
+      } else {
+        alert(result.error.message);
+      }
+    }
+  };
+
+  return (
+    <div >
+
+      {loading && <p>Loading...</p>}
+    
+      {!wallet && !loading && !registerProfile && (
+        <Button
+          disabled={isLoginPending}
+          onClick={onLoginClick}
+        >
+          Sign in with lens
+        </Button>
+        
+      )}
+      
+      {wallet && !loading && (
+        <div>
+          <Button onClick={logout}>
+            Sign out
+          </Button>
+          </div>
+      )}
+
+      {/*{registerProfile && (
+        <div>
+          <Button disabled={isPending} onClick={onClick}>
+            Register with lens
+          </Button>
+        </div>
+      )}*/}
+    </div>
+  );
+}
 
 const Index = () => {
   const [hidden, isHidden] = useState(true);
+  //const { execute: login, isPending: isLoginPending } = useWalletLogin();
+  const { data: wallet, loading } = useActiveProfile();
 
-  
-useEffect(() => {
-  // get the proof request params for this popup
-   const params = new URLSearchParams(window.location.search)
-   const username = params.get('username')!;
-   if (username!=null) {
-     //getCommitment();
-    //dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation onboarded to chain" });
-
-    const fetchData = async () => {
-      // get the data from the api
-      isHidden(false);
-
-      await getCommitment();
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation onboarded to chain" });
-      isHidden(true);
-
-    }
-  
-    // call the function
-    const result = fetchData()
-      .catch(console.error);
-
-   }
-
-  
-  }, [])
-  
-  const [state, dispatch] = useContext(MetaMaskContext);
-
-  const isMetaMaskReady = isLocalSnap(defaultSnapOrigin)
-    ? state.isFlask
-    : state.snapsDetected;
-
-  const handleConnectClick = async () => {
-    try {
-      await connectSnap();
-      const installedSnap = await getSnap();
-
-      dispatch({
-        type: MetamaskActions.SetInstalled,
-        payload: installedSnap,
-      });
-    } catch (e) {
-      console.error(e);
-      dispatch({ type: MetamaskActions.SetError, payload: e });
-    }
-  };
-
-  const handleGetCommitmentClick = async () => {
-    try {
-      await getTwitterID();
-      //dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation onboarded to chain" });
-    } catch (e) {
-      console.error(e);
-      dispatch({ type: MetamaskActions.SetError, payload: e });
-    }
-  };
-
-  const handleZkProofClick = async () => {
-    try {
-      const result = await getZkProof();
-      if (result) {
-        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation ownership proved" });
-      }
-      else 
-        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation invalid" });
-    } catch (e) {
-      console.error(e);
-      dispatch({ type: MetamaskActions.SetError, payload: e });
-    }
-  };
-  
-  const { data: publisher, loading } = useActiveProfile();
-  const { execute: create, error, isPending } = useCreatePost({ publisher: publisher!, upload: uploadJson });
+  const { execute: create, error, isPending: isPendingCreatePost } = useCreatePost({ publisher: wallet!, upload: uploadJson });
   const { execute: update, error: updateError, isPending: isUpdatePending } = useUpdateProfileDetails({
-    profile: publisher!,
+    profile: wallet!,
     upload: uploadJson
   });
-
   async function uploadJson(data: unknown){
     try {
       console.log("uploading post with data: "+ JSON.stringify(data));
@@ -238,20 +296,26 @@ useEffect(() => {
       const username = params.get('username')!;
 
       const name = username;
-      const bio = "Hi, I'm " + username;
+      const bio = `Hi, I'm <a href="www.google.com"/> ${username} </a>`;
       const attributes = {
         location: "earth",
         website: "",
         x: "https://x.com/"+username,
+        test: "https://google.com"
       };
       await update({ name, bio, attributes });
       console.log("Profile updated");
+      alert("Taking you to your lens profile");
+      const lensHandle = wallet?.handle.split(".");
+      window.location.replace(`https://testnet.lenster.xyz/u/${lensHandle![0]}`);
+      
     } catch(err) {
       console.log({ err })
     }
   }
 
   async function createPost() {
+
     const params = new URLSearchParams(window.location.search)
     const username = params.get('username')!;
     const platform = params.get('id_platform')!;
@@ -266,28 +330,76 @@ useEffect(() => {
       contentFocus: ContentFocus.TEXT_ONLY,
       locale: 'en',
     })
+    return result.toString();
   }
   catch(err) {
-    console.log("err...."+ err);
-    console.log(error);
-  }
-    //console.log("Response from post creation: "+ result);
-  }
-
-  const portLensClick = async () => {
-    try {
-      await createPost();
-      await updateProfile();
+    console.log(""+ err);
     }
-    catch (e) {
+  }
+  const { connectAsync } = useConnect({
+    connector: new InjectedConnector(),
+  });
+
+  const onBeforeOAuthLoginClick = async () => {
+    // get twitter
+    await getTwitterID();
+  };
+  const onAfterOAuthLoginClick = async () => {
+    // get commitment
+    await getCommitment();
+    // get zk
+    const result = await getZkProof();
+      if (result) {
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation ownership proved" });
+      }
+      else
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation invalid" });
+    // port to lens
+
+    await createPost();
+    await updateProfile();
+  };
+
+  
+  const [beforeOauth,setBeforeOauth] = useState(false);
+  const [afterOauth, setAfterOauth] = useState(false);
+
+  useEffect(() => {
+    // get the proof request params for this popup
+     const params = new URLSearchParams(window.location.search)
+     const username = params.get('username')!;
+   
+     if (username!=null) 
+        setAfterOauth(true);
+    else 
+      setBeforeOauth(true);
+    
+    }, [])
+  
+  const [state, dispatch] = useContext(MetaMaskContext);
+
+  const isMetaMaskReady = isLocalSnap(defaultSnapOrigin)
+    ? state.isFlask
+    : state.snapsDetected;
+
+  const handleConnectClick = async () => {
+    try {
+      await connectSnap();
+      const installedSnap = await getSnap();
+
+      dispatch({
+        type: MetamaskActions.SetInstalled,
+        payload: installedSnap,
+      });
+    } catch (e) {
       console.error(e);
       dispatch({ type: MetamaskActions.SetError, payload: e });
-    } 
+    }
   };
+
 
   return (
     <Container>
-      
       <Heading>
         Onboard using <Span>Plurality</Span>
       </Heading>
@@ -297,7 +409,6 @@ useEffect(() => {
         {!hidden && (
           <Message>
           Connecting on chain...
-          {/*<Spinner size="xl" color='red.500'/>*/}
           </Message>
 
         )}
@@ -344,19 +455,21 @@ useEffect(() => {
             disabled={!isMetaMaskReady}
           />
         )}
-        <Card
+        {beforeOauth && (
+          <Card
           content={{
-            title: 'Connect Reputation for X',
+            title: 'Onboard using Twitter(X)',
             description:
-              'Register your X reputation on-chain using MetaMask.',
+              'Onboard to web3 social media Lens using your twitter profile.',
             button: (
-              <CommitmentButton
-                onClick={handleGetCommitmentClick}
-                disabled={!state.installedSnap}
-              />
+              <Button
+                onClick={onBeforeOAuthLoginClick}
+                disabled={!isMetaMaskReady}
+              >  Authenticate
+              </Button>
             ),
           }}
-          disabled={!state.installedSnap}
+          disabled={!state.installedSnap || !wallet || !isMetaMaskReady}
           fullWidth={
             isMetaMaskReady &&
             Boolean(state.installedSnap) &&
@@ -364,19 +477,19 @@ useEffect(() => {
           }
         />
 
-        <Card
+        )}
+
+        {afterOauth && (wallet == null || wallet==undefined) && (
+          <Card
           content={{
-            title: 'Prove Reputation for X',
+            title: 'Onboard using Twitter(X)',
             description:
-              'Prove your X reputation using secrets stored in MetaMask.',
+              'Onboard to web3 social media Lens using your twitter profile.',
             button: (
-              <ZKProofButton
-                onClick={handleZkProofClick}
-                disabled={!state.installedSnap}
-              />
+                <Authentication/>
             ),
           }}
-          disabled={!state.installedSnap}
+          disabled={!state.installedSnap || (wallet!=null && wallet!=undefined) || !isMetaMaskReady}
           fullWidth={
             isMetaMaskReady &&
             Boolean(state.installedSnap) &&
@@ -384,20 +497,24 @@ useEffect(() => {
           }
         />
 
+        )}
 
-        <Card
+
+      {afterOauth && (wallet!=null && wallet!=undefined) && (
+          <Card
           content={{
-            title: 'Port profile to lens',
+            title: 'Onboard using Twitter(X)',
             description:
-              'Port your profile to lens.',
+              'Onboard to web3 social media Lens using your twitter profile.',
             button: (
-              <PortToLens
-                onClick={portLensClick}
-                disabled={!state.installedSnap && !hidden }
-              />
+              <Button
+                disabled={!wallet || !isMetaMaskReady}
+                onClick={onAfterOAuthLoginClick}
+              >  Connect profile to Lens
+              </Button>
             ),
           }}
-          disabled={!state.installedSnap}
+          disabled={!state.installedSnap || !wallet || !isMetaMaskReady}
           fullWidth={
             isMetaMaskReady &&
             Boolean(state.installedSnap) &&
@@ -405,6 +522,8 @@ useEffect(() => {
           }
         />
 
+        )}
+        
 
         {/*<Notice>
           <p>
@@ -420,3 +539,5 @@ useEffect(() => {
 };
 
 export default Index;
+
+

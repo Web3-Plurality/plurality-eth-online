@@ -60,43 +60,6 @@ const Button = styled.button`
   }
 `;
 
- 
-  function CreateProfile() {
-    const { data: wallet, loading } = useActiveProfile();
-    const { execute, isPending } = useCreateProfile();
- 
-    const onClick = async () => {
-      let handle = window.prompt("Create your lens handle");
-      if (handle == null || handle == "") {
-        handle = "";
-      }  
-      const result = await execute({ handle });
- 
-      if (result.isSuccess()) {
-        alert("Profile created!"+ result.value);
-        return;
-      }
- 
-      switch (result.error.constructor) {
-        case DuplicatedHandleError:
-          console.log("Handle already taken");
- 
-        default:
-          alert(`Could not create profile due to: ${result.error.message}`);
-      }
-    };
- 
-    return (
-      <div>
-          <div>
-            <Button disabled={isPending} onClick={onClick}>
-              Register with lens
-            </Button>
-            </div>
-      </div>
-    );
-  }
-  
   export function Authentication() {
     const { execute: login, isPending: isLoginPending } = useWalletLogin();
     const { data: wallet, loading } = useActiveProfile();
@@ -105,6 +68,33 @@ const Button = styled.button`
     const { disconnectAsync } = useDisconnect();
     const { execute, isPending } = useCreateProfile();
 
+    async function createLensProfile (handle:string): Promise<string>  {
+      try {
+        console.log("Trying to create lens profile with handle: "+handle);
+        const result = await execute({ handle });
+   
+        if (result.isSuccess()) {
+          //alert("Please refresh the browser to sign in!");
+          window.location.reload();
+          isRegisterProfile(false);
+          return "SUCCESS";
+        }
+   
+        switch (result.error.constructor) {
+          case DuplicatedHandleError:
+            console.log("Handle already taken");
+            isRegisterProfile(false);
+            return "DUPLICATE"
+          default:
+            alert(`Could not create profile due to: ${result.error.message}`);
+            isRegisterProfile(false);
+            return "ERROR";
+        }
+      } catch (e) {
+        console.error(e);
+      }
+      return "";
+    };
   
     const [registerProfile, isRegisterProfile] = useState(false);
     const { connectAsync } = useConnect({
@@ -154,7 +144,19 @@ const Button = styled.button`
           if (result.value == null)
           {
             isRegisterProfile(true);
-            alert("No lens profile found. Please register first");
+            alert("No lens profile found. Creating one..");
+              const params = new URLSearchParams(window.location.search)
+              let username = params.get('username')!;
+              const response = await createLensProfile(username);
+              if (response == "DUPLICATE")
+              {
+                alert("The lens handle matching your twitter username is already taken. Trying a new random handle");
+                const min = 1;
+                const max = 100000;
+                let rand = min + Math.floor(Math.random() * (max - min));
+                username=username+rand;
+                await createLensProfile(username);
+              }
           }
         } else {
           alert(result.error.message);
@@ -165,7 +167,7 @@ const Button = styled.button`
     return (
       <div >
   
-        {loading && <p>Loading...</p>}
+        {/*{loading && <p>Loading...</p>}
       
         {!wallet && !loading && !registerProfile && (
           <Button
@@ -175,7 +177,7 @@ const Button = styled.button`
             Sign in with lens
           </Button>
           
-        )}
+        )}*/}
         
         {wallet && !loading && (
           <div>
@@ -185,13 +187,13 @@ const Button = styled.button`
             </div>
         )}
 
-        {registerProfile && (
+        {/*{registerProfile && (
           <div>
             <Button disabled={isPending} onClick={onClick}>
               Register with lens
             </Button>
           </div>
-        )}
+        )}*/}
       </div>
     );
   }
@@ -202,13 +204,12 @@ export const Header = ({
   handleToggleClick(): void;
 }) => {
   const { data: wallet, loading } = useActiveProfile();
-  //const [lensSignedIn, isLensSignedIn] = useState(false);
   const lensHandle = wallet?.handle.split(".");
+  const handle = lensHandle ? lensHandle[0] : "";
   let lensProfile = "";
   if (lensHandle)
   {
     lensProfile = "https://testnet.lenster.xyz/u/"+lensHandle![0];
-    //isLensSignedIn(true);
   }
   const theme = useTheme();
   const [state, dispatch] = useContext(MetaMaskContext);
@@ -235,7 +236,7 @@ export const Header = ({
         <Title>Plurality</Title>
       </LogoWrapper>
       <RightContainer>
-        <a href={lensProfile}><b> {lensHandle} </b></a>
+        <a href={lensProfile}><b> {handle} </b></a>
         &nbsp;
         &nbsp;
         <Toggle
@@ -243,7 +244,6 @@ export const Header = ({
           defaultChecked={getThemePreference()}
         />
         &nbsp;
-        <HeaderButtons state={state} onConnectClick={handleConnectClick} />
         &nbsp;
         <div><Authentication /></div>
 
