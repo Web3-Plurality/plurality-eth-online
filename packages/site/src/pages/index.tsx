@@ -1,4 +1,5 @@
 import { useContext, createContext, useEffect, useState} from 'react';
+import { useNetwork } from 'wagmi'
 import styled from 'styled-components';
 import { MetamaskActions, MetaMaskContext } from '../hooks';
 import {
@@ -139,6 +140,8 @@ export function Authentication() {
   const [registerProfile, isRegisterProfile] = useState(false);
   const { showLoading, hideLoading } = useContext(LoadingContext)
 
+  const { chain, chains } = useNetwork();
+
   async function createLensProfile (handle:string): Promise<string>  {
     try {
       console.log("Trying to create lens profile with handle: "+handle);
@@ -163,6 +166,7 @@ export function Authentication() {
       }
     } catch (e) {
       console.error(e);
+      alert(`Could not create profile due to: ${result.error.message}`);
     }
     return "";
   };
@@ -255,6 +259,8 @@ const Index = () => {
     profile: wallet!,
     upload: uploadJson
   });
+  const { chain, chains } = useNetwork();
+
   async function uploadJson(data: unknown){
     try {
       console.log("uploading post with data: "+ JSON.stringify(data));
@@ -323,7 +329,7 @@ const Index = () => {
   catch(err) {
     console.log(""+ err);
     hideLoading();
-
+    alert(`Could not create profile due to: ${err}`);
     }
     hideLoading();
   }
@@ -337,6 +343,12 @@ const Index = () => {
   };
   const onAfterOAuthLoginClick = async () => {
     try {
+      if (chain.name !== "Polygon Mumbai") {
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
+
+        //alert("Please connect your metamask to Polygon Mumbai");
+        return;
+      }
     // get commitment
     showLoading();
     dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Posting user's commitment on chain" });
