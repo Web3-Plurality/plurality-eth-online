@@ -100,6 +100,7 @@ export const createGroup = async () => {
 
   export const verifyZKProofSentByUser = async (fullProof: any) => {
 
+    let txUrl = "";
     if (!isInitialized) {
       await init();
     }
@@ -125,18 +126,21 @@ export const createGroup = async () => {
     .once("transactionHash", (txhash: any) => {
       console.log(`Mining verifyZKProofSentByUser transaction ...`);
       console.log(`https://${network}.etherscan.io/tx/${txhash}`);
+      txUrl = `https://${network}.etherscan.io/tx/${txhash}`;
     });
     // The transaction is now on chain!
     console.log(`verifyZKProofSentByUser Mined in block ${receipt.blockNumber}`);
     
     if (receipt.events.ProofVerified) 
     {
-      console.log("Proof is valid. Returning true");
-      return true;
+      console.log("Proof is valid. Returning tx url");
+      return txUrl;
+      //return true;
     }
     else 
     {
-      console.log("Proof is invalid. Returning false");
-      return false;
+      console.log("Proof is invalid. Returning empty tx url");
+      return txUrl;
+      //return false;
     }
   };

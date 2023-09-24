@@ -13,8 +13,9 @@ type CardProps = {
 
 const CardWrapper = styled.div<{ fullWidth?: boolean; disabled: boolean }>`
   display: flex;
+  margin: 16px 0 0 16px;
   flex-direction: column;
-  width: ${({ fullWidth }) => (fullWidth ? '100%' : '250px')};
+  width: ${({ fullWidth }) => (fullWidth ? '500px' : '300px')};
   background-color: ${({ theme }) => theme.colors.card.default};
   margin-top: 2.4rem;
   margin-bottom: 2.4rem;
@@ -24,6 +25,7 @@ const CardWrapper = styled.div<{ fullWidth?: boolean; disabled: boolean }>`
   box-shadow: ${({ theme }) => theme.shadows.default};
   filter: opacity(${({ disabled }) => (disabled ? '.4' : '1')});
   align-self: stretch;
+  align-items: center;
   ${({ theme }) => theme.mediaQueries.small} {
     width: 100%;
     margin-top: 1.2rem;
@@ -34,6 +36,7 @@ const CardWrapper = styled.div<{ fullWidth?: boolean; disabled: boolean }>`
 
 const Title = styled.h2`
   font-size: ${({ theme }) => theme.fontSizes.large};
+  text-align: center;
   margin: 0;
   ${({ theme }) => theme.mediaQueries.small} {
     font-size: ${({ theme }) => theme.fontSizes.text};
@@ -43,6 +46,7 @@ const Title = styled.h2`
 const Description = styled.div`
   margin-top: 2.4rem;
   margin-bottom: 2.4rem;
+  text-align: center;
 `;
 
 export const Card = ({ content, disabled = false, fullWidth }: CardProps) => {

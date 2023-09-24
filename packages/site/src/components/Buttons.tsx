@@ -70,7 +70,7 @@ const ConnectedIndicator = styled.div`
 `;
 
 export const InstallFlaskButton = () => (
-  <Link href="https://metamask.io/flask/" target="_blank">
+  <Link href="https://metamask.io/flask/" target="_blank" style={{ margin: 'auto' }}>
     <FlaskFox />
     <ButtonText>Install MetaMask Flask</ButtonText>
   </Link>
@@ -78,7 +78,7 @@ export const InstallFlaskButton = () => (
 
 export const ConnectButton = (props: ComponentProps<typeof Button>) => {
   return (
-    <Button {...props}>
+    <Button {...props} style={{ margin: 'auto' }}>
       <FlaskFox />
       <ButtonText>Connect</ButtonText>
     </Button>

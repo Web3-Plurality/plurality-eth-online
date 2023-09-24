@@ -4,7 +4,8 @@ import { Footer, Header } from './components';
 
 import { GlobalStyle } from './config/theme';
 import { ToggleThemeContext } from './Root';
-
+import Spinner from './components/Spinner';
+import LoadingProvider from './components/LoadingProvider';
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
@@ -23,11 +24,16 @@ export const App: FunctionComponent<AppProps> = ({ children }) => {
   return (
     <>
       <GlobalStyle />
+      <LoadingProvider>
+      <Spinner />
+
       <Wrapper>
         <Header handleToggleClick={toggleTheme} />
         {children}
         <Footer />
       </Wrapper>
+      </LoadingProvider>
+
     </>
   );
 };

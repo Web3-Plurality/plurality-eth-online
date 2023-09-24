@@ -74,7 +74,7 @@ export const sendHello = async () => {
  * Invoke the "commitment_request" & "commitment_request" method from the example snap.
  */
 
-export const getCommitment = async () => {
+export const getCommitment = async (): Promise<boolean> => {
   let acceptance = await window.ethereum.request({
     method: 'wallet_invokeSnap',
     params: { snapId: defaultSnapOrigin, request: { method: 'commitment_request', params: {source:"twitter"} }},
@@ -87,9 +87,11 @@ export const getCommitment = async () => {
     console.log(commitment);
     await createGroup();
     await addMemberToGroup(commitment);
+    return true;
   }
   else {
     console.log("User rejected the request for commitment");
+    return false;
   }
 };
 
@@ -138,15 +140,16 @@ export const getZkProof = async () : Promise<string> => {
   console.log(proof); 
 
   // zk proof verification
-  const verified = await verifyZKProofSentByUser(proof);
-  if (verified) {
-    alert("Proof is valid");
-    return JSON.stringify(proof);
-
+  const txUrl = await verifyZKProofSentByUser(proof);
+  if (txUrl!="") {
+    //alert("Proof is valid");
+    //return JSON.stringify(proof);
+    return txUrl!;
   }
   else {
     alert ("Proof invalid");
-    return "Invalid proof";
+    //return "Invalid proof";
+    return txUrl;
   }
 };
 
