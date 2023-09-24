@@ -1,11 +1,10 @@
 {
-  "name": "snap",
-  "version": "0.1.0",
-  "private": true,
-  "description": "The 'Hello, world!' of MetaMask Snaps, now written in TypeScript.",
+  "name": "web3-plurality",
+  "version": "0.1.1",
+  "description": "A snap for managing semaphore secrets and creating zk-proofs for web3-plurality",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MetaMask/template-snap-monorepo.git"
+    "url": "git+https://github.com/Web3-Plurality/plurality-snap.git"
   },
   "license": "(MIT-0 OR Apache-2.0)",
   "main": "src/index.ts",
@@ -24,6 +23,7 @@
     "lint:misc": "prettier '**/*.json' '**/*.md' '!CHANGELOG.md' --ignore-path .gitignore",
     "serve": "mm-snap serve",
     "start": "mm-snap watch",
+    "fix": "mm-snap manifest --fix",
     "test": "jest"
   },
   "dependencies": {

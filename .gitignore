@@ -4,6 +4,7 @@ build/
 coverage/
 .cache/
 public/
+traefik/letsencrypt
 
 # Logs
 logs
@@ -63,7 +64,7 @@ node_modules/
 .yarn-integrity
 
 # dotenv environment variables file
-.env
+#.env
 .env.test
 
 # Stores VSCode versions used for testing VSCode extensions

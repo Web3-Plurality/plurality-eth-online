@@ -30,4 +30,4 @@ yarn.lock
 /cache
 
 # env
-.env
+#.env

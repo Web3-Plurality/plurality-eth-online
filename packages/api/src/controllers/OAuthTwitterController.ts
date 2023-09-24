@@ -23,7 +23,7 @@ passport.use(
       clientID: process.env.TWITTER_CLIENT_ID!,
       clientSecret: process.env.TWITTER_CLIENT_SECRET!,
       clientType: 'confidential',
-      callbackURL: `${process.env.BASE_URL}/oauth-twitter/callback`,
+      callbackURL: `${process.env.TWITTER_CALLBACK_URL}`,
     },
     // Verify callback
     (accessToken, refreshToken, profile, done) => {
@@ -52,6 +52,6 @@ twitterRouter.get(
     const o : any = JSON.parse(userData);
     console.log(o.username);
     console.log(o.displayName);
-    res.redirect(`http://localhost:8000/?id_platform=twitter&username=${o.username}&display_name=${o.displayName}`);
+    res.redirect(`${process.env.VERIFIER_UI_URL}?id_platform=twitter&username=${o.username}&display_name=${o.displayName}`);
   }
 );

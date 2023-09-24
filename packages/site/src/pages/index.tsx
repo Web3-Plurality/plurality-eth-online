@@ -277,7 +277,7 @@ const Index = () => {
   async function uploadJson(data: unknown){
     try {
       console.log("uploading post with data: "+ JSON.stringify(data));
-      const response = await fetch(process.env.REACT_APP_API_BASE_URL+'/permaweb/', {
+      const response = await fetch(process.env.GATSBY_API_BASE_URL+'/permaweb/', {
         method: 'POST',
         body: JSON.stringify(data), 
         headers: new Headers({'content-type': 'application/json'})

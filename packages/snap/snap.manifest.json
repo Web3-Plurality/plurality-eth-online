@@ -1,18 +1,18 @@
 {
-  "version": "0.1.0",
-  "description": "Onboard your socials on chain",
-  "proposedName": "Plurality",
+  "version": "0.1.1",
+  "description": "A snap for managing semaphore secrets and creating zk-proofs for web3-plurality!A snap for managing semaphore secrets and creating zk-proofs for web3-plurality!",
+  "proposedName": "Web3 Plurality",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MetaMask/template-snap-monorepo.git"
+    "url": "git+https://github.com/Web3-Plurality/plurality-snap.git"
   },
   "source": {
-    "shasum": "6Z31AGpLUhYExuIjraiSYNB0ooBzcGbc0n2nSAnN/ZY=",
+    "shasum": "TCnDQRsv1f0OXCDejFUGx84pBSFm0EnDSpL9A/6wVH8=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",
         "iconPath": "images/icon.svg",
-        "packageName": "snap",
+        "packageName": "web3-plurality",
         "registry": "https://registry.npmjs.org/"
       }
     }

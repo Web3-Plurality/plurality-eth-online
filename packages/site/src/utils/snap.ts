@@ -107,10 +107,10 @@ export const getZkProof = async () : Promise<string> => {
   //TODO: The following code block should be executed in snap 
   const identity = new Identity(identityString!.toString());
   const semaphoreEthers = new SemaphoreEthers("sepolia", {
-    address: process.env.REACT_APP_SEMAPHORE_IDENTITY_CONTRACT,
+    address: process.env.GATSBY_SEMAPHORE_IDENTITY_CONTRACT,
     startBlock: 4269200
   });
-  const groupId = process.env.REACT_APP_GROUP_ID!;
+  const groupId = process.env.GATSBY_GROUP_ID!;
   console.log("using group id: "+groupId);
   const groupIds = await semaphoreEthers.getGroupIds()
   console.log(groupIds);
