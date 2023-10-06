@@ -7,7 +7,7 @@
     "url": "git+https://github.com/Web3-Plurality/plurality-snap.git"
   },
   "source": {
-    "shasum": "TsapuAUURMs9kfxRYvLzG+VccMWhYYkjexSiqeq6ypw=",
+    "shasum": "TCnDQRsv1f0OXCDejFUGx84pBSFm0EnDSpL9A/6wVH8=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",

@@ -12,11 +12,11 @@ import { ThemeProvider } from 'styled-components';
 import { getThemePreference, setLocalStorage } from './utils';
 import { dark, light } from './config/theme';
 import { MetaMaskProvider } from './hooks';
+import { LensClient } from "@lens-protocol/client";
 
 
 const { publicClient, webSocketPublicClient } = configureChains(
   [polygonMumbai, polygon],
-  //[polygonMumbai],
   [publicProvider()]
 );
 
@@ -36,7 +36,7 @@ const config = createConfig({
 const lensConfig: LensConfig = {
   appId: appId('Plurality'),
   bindings: wagmiBindings(),
-  environment: development,
+  environment: development
 };
 
 export type RootProps = {

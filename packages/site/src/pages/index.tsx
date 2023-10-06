@@ -17,17 +17,17 @@ import {
 } from '../components';
 import { defaultSnapOrigin } from '../config';
 import { getTwitterID } from '../utils/oauth';
-import { ContentFocus, DuplicatedHandleError, ProfileOwnedByMe, useActiveProfile, useActiveWallet, useCreatePost, useCreateProfile, useUpdateProfileDetails, useWalletLogin, useWalletLogout } from '@lens-protocol/react-web';
+import { ContentFocus, DuplicatedHandleError, ProfileOwnedByMe, useActiveProfile, useActiveWallet, useActiveWalletSigner, useCreatePost, useCreateProfile, useUpdateProfileDetails, useWalletLogin, useWalletLogout } from '@lens-protocol/react-web';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from 'react-bootstrap';
-import { generateProof } from '@semaphore-protocol/proof';
-import { Identity } from '@semaphore-protocol/identity';
-import { Group } from '@semaphore-protocol/group';
-import LoadingOverlay from 'react-loading-overlay-ts';
 import LoadingContext from '../components/LoadingContext';
-import Spinner from '../components/Spinner';
-  
+import FacebookLogin from 'react-facebook-login';
+import { LensClient, development } from "@lens-protocol/client";
+import { ethers } from "ethers";
+import { getInformationForLens, getInterestsForLens } from '../utils/userinterest';
+
+
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -129,7 +129,6 @@ const ErrorMessage = styled.div`
   }
 `;
 
-
 export function Authentication() {
   const { execute: login, isPending: isLoginPending } = useWalletLogin();
   const { data: wallet, loading } = useActiveProfile();
@@ -166,7 +165,7 @@ export function Authentication() {
       }
     } catch (e) {
       console.error(e);
-      alert(`Could not create profile due to: ${result.error.message}`);
+      alert(`Could not create profile due to: ${e}`);
     }
     return "";
   };
@@ -251,8 +250,13 @@ export function Authentication() {
 const Index = () => {
   const [hidden, isHidden] = useState(true);
   const { showLoading, hideLoading } = useContext(LoadingContext)
+  const { isConnected } = useAccount();
+  const { disconnectAsync } = useDisconnect();
+  const { execute: login, error: loginError, isPending: isLoginPending } = useWalletLogin();
 
   const { data: wallet, loading } = useActiveProfile();
+  const { data: activeWallet, loading: activeLoading } = useActiveWallet();
+
 
   const { execute: create, error, isPending: isPendingCreatePost } = useCreatePost({ publisher: wallet!, upload: uploadJson });
   const { execute: update, error: updateError, isPending: isUpdatePending } = useUpdateProfileDetails({
@@ -260,6 +264,8 @@ const Index = () => {
     upload: uploadJson
   });
   const { chain, chains } = useNetwork();
+  const [userInterests, setUserInterests] = useState<string[]>([]);
+  const [userInformation, setUserInformation] = useState("");
 
   async function uploadJson(data: unknown){
     try {
@@ -312,13 +318,16 @@ const Index = () => {
     const username = params.get('username')!;
     const platform = params.get('id_platform')!;
 
-
     const postContent = "Gm folks! \n"+
                         "I just connected my " + platform + " with username "+ username + " \n" +
                         "View my zk proof verification on etherscan: " + zkproof +" \n" + 
+                        userInformation +
                         "Let's make social media sovereign!"; 
     try {
+      alert("Posting with: "+ userInformation);
+
       showLoading();
+      console.log(userInformation);
     const result = await create({
       content: postContent,
       contentFocus: ContentFocus.TEXT_ONLY,
@@ -333,6 +342,63 @@ const Index = () => {
     }
     hideLoading();
   }
+
+  async function addInterests() {
+
+    console.log("In add interests");
+    const lensClient = new LensClient({
+      environment: development
+    });
+
+    if (isConnected) {
+      await disconnectAsync();
+    }
+
+    const { connector } = await connectAsync();
+
+    if (connector instanceof InjectedConnector) {
+      const walletClient = await connector.getWalletClient();
+      console.log("connected");
+
+      const wallet = walletClient.account;
+      const address = wallet.address;
+      const challenge = await lensClient.authentication.generateChallenge(address);
+      console.log(challenge);
+      const signature = await walletClient.signMessage({account: address,message: challenge});
+      await lensClient.authentication.authenticate(address, signature);
+      console.log ("is client authenticated? " + await lensClient.authentication.isAuthenticated());
+        // check the state with
+      const allOwnedProfiles = await lensClient.profile.fetchAll({
+        ownedBy: [address],
+        limit: 1,
+      });
+      
+      console.log("all owned profiles: ");
+      console.log(allOwnedProfiles);
+      const defaultProfile = allOwnedProfiles.items[0];
+
+      try {
+        const profileId = defaultProfile.id;
+        console.log("Profile interests were: "+await lensClient.profile.allInterests());
+        // add interests
+        console.log(userInterests);
+        await lensClient.profile.addInterests({
+          interests: userInterests,
+          profileId,
+        });
+        console.log(defaultProfile);
+      }
+      catch(err) {
+        console.log(""+ err);
+        hideLoading();
+        alert(`Could not create profile due to: ${err}`);
+        }
+    }
+    else {
+      alert("Please login first");
+    }
+    
+  }
   const { connectAsync } = useConnect({
     connector: new InjectedConnector(),
   });
@@ -342,15 +408,16 @@ const Index = () => {
     await getTwitterID();
   };
   const onAfterOAuthLoginClick = async () => {
+
     try {
       if (chain.name !== "Polygon Mumbai") {
         dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
-
-        //alert("Please connect your metamask to Polygon Mumbai");
         return;
       }
+
     // get commitment
     showLoading();
+
     dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Posting user's commitment on chain" });
     const res = await getCommitment();
     if (!res) {
@@ -375,6 +442,9 @@ const Index = () => {
           dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation invalid" });
       // port to lens
 
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Personalizing lens profile by adding your interests" });
+      await addInterests();
+
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Creating verification post on lens" });
       await createPost(result);
 
@@ -393,18 +463,6 @@ const Index = () => {
   
   const [beforeOauth,setBeforeOauth] = useState(false);
   const [afterOauth, setAfterOauth] = useState(false);
-
-  useEffect(() => {
-    // get the proof request params for this popup
-     const params = new URLSearchParams(window.location.search)
-     const username = params.get('username')!;
-   
-     if (username!=null) 
-        setAfterOauth(true);
-    else 
-      setBeforeOauth(true);
-    
-    }, [])
   
   const [state, dispatch] = useContext(MetaMaskContext);
 
@@ -425,6 +483,86 @@ const Index = () => {
       console.error(e);
       dispatch({ type: MetamaskActions.SetError, payload: e });
     }
+  };
+
+  useEffect(() => {
+    // get the proof request params for this popup
+     const params = new URLSearchParams(window.location.search)
+     const username = params.get('username')!;
+   
+     if (username!=null) 
+        setAfterOauth(true);
+    else 
+      setBeforeOauth(true);
+
+      (window as any).fbAsyncInit = function() {
+        (window as any).FB.init({
+          appId            : '696970245672784',
+          autoLogAppEvents : true,
+          xfbml            : true,
+          version          : 'v18.0'
+        });
+
+        (window as any).FB.getLoginStatus(function(response) {   // Called after the JS SDK has been initialized.
+          statusChangeCallback(response);        // Returns the login status.
+        });
+        
+      };
+
+      (function(d, s, id) {
+        let js, fjs: any = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) return;
+        js = d.createElement(s); js.id = id;
+        js.src = "https://connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));
+
+
+    
+    }, [])
+
+
+    function statusChangeCallback(response) {  // Called with the results from FB.getLoginStatus().
+      console.log('statusChangeCallback');
+      console.log(response);                   // The current login status of the person.
+      if (response.status === 'connected') {   // Logged into your webpage and Facebook.
+        testAPI();  
+      } else {                                 // Not logged into your webpage or we are unable to tell.
+        console.log('Please log ' +
+          'into this webpage.');
+      }
+    }
+
+    function testAPI() {                      // Testing Graph API after login.  See statusChangeCallback() for when this call is made.
+      console.log('Welcome!  Fetching your information.... ');
+      (window as any).FB.api('/me?fields=name,picture,gender,inspirational_people,languages,meeting_for,quotes,significant_other,sports, music, photos, age_range, favorite_athletes, favorite_teams, hometown, feed, likes', function(response) {
+        console.log('Successful login for: ' + response.name);
+        //alert('Thanks for logging in, ' + response.name + '!');
+        
+        setUserInterests(getInterestsForLens(response));
+        setUserInformation(getInformationForLens(response));
+        (window as any).FB.api(
+          `/${response.id}`,
+          function (response) {
+            console.log(response);
+            if (response && !response.error) {
+              /* handle the result */
+              console.log("Result from me: ");
+              console.log(response);
+            }
+          }
+      );
+      });
+    }
+
+  const responseFacebook = async (response) => {
+    console.log(response);
+    const accessToken = response.accessToken;
+    console.log("Access token is: "+accessToken);
+    setUserInterests(getInterestsForLens(response));
+    alert(userInterests);
+    setUserInformation(getInformationForLens(response));
+    alert(userInformation);
   };
 
 
@@ -455,6 +593,7 @@ const Index = () => {
             <b>An error happened:</b> {state.error.message}
           </ErrorMessage>
         )}
+
         {!isMetaMaskReady && (
           <Card
             content={{
@@ -507,11 +646,13 @@ const Index = () => {
             description:
               'Onboard to web3 social media Lens using your Facebook profile.',
             button: (
-              <Button
-                onClick={onBeforeOAuthLoginClick}
-                disabled={true}
-              >  Authenticate
-              </Button>
+              <FacebookLogin
+              appId="696970245672784"
+              autoLoad={false}
+              fields="name,picture,gender,inspirational_people,languages,meeting_for,quotes,significant_other,sports, music, photos, age_range, favorite_athletes, favorite_teams, hometown, feed, likes "
+              callback={responseFacebook}
+              scope="public_profile, email, user_hometown, user_likes, user_friends, user_gender, user_age_range"
+            />
             ),
           }}
           disabled={true}
