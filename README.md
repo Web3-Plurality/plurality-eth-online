@@ -24,7 +24,7 @@ You can either use docker or yarn to run this:
 ## Yarn
 
 ```shell
-yarn install && yarn start
+yarn install-all && yarn start
 ```
 
 If everything builds correctly the website should be accessible at
@@ -42,7 +42,7 @@ docker-compose up
 If everything builds correctly the website should be accessible at
 
 ```shell
-https://localhost
+https://localhost:8000
 ```
 
 ## Snaps is pre-release software

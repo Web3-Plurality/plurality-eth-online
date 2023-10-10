@@ -24,6 +24,7 @@
     "lint:fix": "yarn lint:eslint --fix && yarn lint:misc --write",
     "lint:misc": "prettier '**/*.json' '**/*.md' '!**/CHANGELOG.md' '**/*.yml' --ignore-path .gitignore",
     "start": "yarn workspaces foreach --parallel --interlaced --verbose run start",
+    "install-all": "yarn workspaces foreach --parallel --interlaced --verbose install",
     "test": "echo \"TODO\""
   },
   "devDependencies": {

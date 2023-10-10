@@ -10,7 +10,8 @@
     "lint:eslint": "eslint . --cache --ext js,ts",
     "lint:fix": "yarn lint:eslint --fix && yarn lint:misc --write",
     "lint:misc": "prettier '**/*.json' '**/*.md' '!CHANGELOG.md' --ignore-path .gitignore",
-    "start": "cross-env GATSBY_TELEMETRY_DISABLED=1 HTTPS=true gatsby develop -H 0.0.0.0 --https"
+    "start": "cross-env GATSBY_TELEMETRY_DISABLED=1 HTTPS=true gatsby develop -H 0.0.0.0 --https",
+    "deploy": "cross-env GATSBY_TELEMETRY_DISABLED=1 gatsby develop -H 0.0.0.0"
   },
   "browserslist": {
     "production": [
@@ -39,7 +40,6 @@
     "crypto-browserify": "^3.12.0",
     "facebook-sdk": "^0.3.3",
     "https-browserify": "^1.0.0",
-    "mkcert": "^3.0.0",
     "os-browserify": "^0.3.0",
     "path-browserify": "^1.0.1",
     "react": "^18.2.0",
@@ -89,5 +89,9 @@
     "prettier-plugin-packagejson": "^2.2.18",
     "rimraf": "^3.0.2",
     "typescript": "^4.7.4"
+  },
+  "packageManager": "yarn@3.2.1",
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
