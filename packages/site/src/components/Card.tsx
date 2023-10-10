@@ -1,5 +1,7 @@
 import { ReactNode } from 'react';
 import styled from 'styled-components';
+//import { Checkmark } from 'react-checkmark';
+
 
 type CardProps = {
   content: {
@@ -9,6 +11,7 @@ type CardProps = {
   };
   disabled?: boolean;
   fullWidth?: boolean;
+  connected?: boolean; 
 };
 
 const CardWrapper = styled.div<{ fullWidth?: boolean; disabled: boolean }>`
@@ -49,12 +52,16 @@ const Description = styled.div`
   text-align: center;
 `;
 
-export const Card = ({ content, disabled = false, fullWidth }: CardProps) => {
+
+export const Card = ({ content, disabled = false, fullWidth, connected }: CardProps) => {
   const { title, description, button } = content;
   return (
     <CardWrapper fullWidth={fullWidth} disabled={disabled}>
+      {/*{connected && (
+        <Checkmark size="small"/>
+      )}*/}
       {title && (
-        <Title>{title}</Title>
+        <Title>{title} </Title>
       )}
       <Description>{description}</Description>
       {button}
