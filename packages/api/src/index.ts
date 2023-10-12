@@ -10,6 +10,7 @@ import passport from "passport";
 import swaggerUi from "swagger-ui-express";
 import * as swaggerDocument from "./swagger.json";
 import { permawebRouter } from './controllers/PermawebUploadController';
+import { tiktokRouter } from './controllers/OAuthTikTokController';
 
 
 dotenv.config();
@@ -26,6 +27,7 @@ app.use(passport.initialize());
 app.use(session({ secret: 'keyboard cat', resave: false, saveUninitialized: true }));
 app.use("/oauth-twitter", twitterRouter);
 app.use("/permaweb", permawebRouter);
+app.use("/oauth-tiktok", tiktokRouter);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 

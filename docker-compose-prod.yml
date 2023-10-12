@@ -20,7 +20,9 @@ services:
       - 'traefik.http.routers.plurality-verifier-be-route.service=plurality-verifier-be-service'
       - 'traefik.http.routers.plurality-verifier-be-route.entrypoints=websecure'
       - 'traefik.http.routers.plurality-verifier-be-route.tls.certresolver=myresolver'
-      - 'traefik.http.routers.plurality-verifier-be-route.rule=Host(`plurality-backend.mmssec.com`)'
+      - 'traefik.http.routers.plurality-verifier-be-route.rule=Host(`${PLURALITY_DOMAIN}`) && PathPrefix(`/api`)'
+      - 'traefik.http.routers.plurality-verifier-be-route.middlewares=plurality-verifier-be-stripprefix@docker'
+      - 'traefik.http.middlewares.plurality-verifier-be-stripprefix.stripprefix.prefixes=/api'
       - 'traefik.http.services.plurality-verifier-be-service.loadbalancer.server.port=5000'
     restart: always
     networks:
@@ -39,7 +41,7 @@ services:
       - 'traefik.http.routers.plurality-verifier-ui-route.service=plurality-verifier-ui-service'
       - 'traefik.http.routers.plurality-verifier-ui-route.entrypoints=websecure'
       - 'traefik.http.routers.plurality-verifier-ui-route.tls.certresolver=myresolver'
-      - 'traefik.http.routers.plurality-verifier-ui-route.rule=Host(`plurality.westeurope.cloudapp.azure.com`)'
+      - 'traefik.http.routers.plurality-verifier-ui-route.rule=Host(`${PLURALITY_DOMAIN}`)'
       - 'traefik.http.services.plurality-verifier-ui-service.loadbalancer.server.port=8000'
     restart: always
     networks:
@@ -54,6 +56,7 @@ services:
     ports:
       - '443:443'
       - '80:80'
+      - '3000:8080'
     command:
       - '--api=true'
       - '--api.insecure=true'
