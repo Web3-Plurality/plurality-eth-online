@@ -16,14 +16,25 @@ import {
 } from '../components';
 import { defaultSnapOrigin } from '../config';
 import { getTwitterID } from '../utils/oauth';
-import { ContentFocus, DuplicatedHandleError, useActiveProfile,  useCreatePost, useCreateProfile, useUpdateDispatcherConfig, useUpdateProfileDetails, useWalletLogin, useWalletLogout } from '@lens-protocol/react-web';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { 
+  ContentFocus, 
+  useActiveProfile,  
+  useCreatePost, 
+  useUpdateDispatcherConfig, 
+  useUpdateProfileDetails 
+} from '@lens-protocol/react-web';
+import { 
+  useAccount, 
+  useConnect, 
+  useDisconnect 
+} from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from 'react-bootstrap';
 import LoadingContext from '../components/LoadingContext';
 import FacebookLogin from 'react-facebook-login';
 import { LensClient, development } from "@lens-protocol/client";
-import { getInformationForLens, getInterestsForLens } from '../utils/userinterest';
+import { getTwitterInformationForLens, getTwitterInterestsForLens } from '../utils/twitterUserInterest';
+import { getFacebookInformationForLens, getFacebookInterestsForLens } from '../utils/facebookUserInterest';
 import { Authentication } from '../components/Authentication';
 
 
@@ -146,15 +157,23 @@ const Index = () => {
     profile: wallet!,
     upload: uploadJson
   });
-  const { chain, chains } = useNetwork();
-  const [userInterests, setUserInterests] = useState<string[]>([]);
-  const [userInformation, setUserInformation] = useState("");
-
   const {
     execute: updateDispatcher,
     error: errorDispatcher,
     isPending: isPendingDispatcher,
   } = useUpdateDispatcherConfig({ profile: wallet! });
+  const { chain, chains } = useNetwork();
+  const [userInterests, setUserInterests] = useState<string[]>([]);
+  const [userInformation, setUserInformation] = useState("");
+  
+  
+  const [state, dispatch] = useContext(MetaMaskContext);
+
+  const isMetaMaskReady = isLocalSnap(defaultSnapOrigin)
+    ? state.isFlask
+    : state.snapsDetected;
+
+
 
   async function uploadJson(data: unknown){
     try {
@@ -194,7 +213,7 @@ const Index = () => {
       console.log("Profile updated");
       alert("Taking you to your lens profile");
       const lensHandle = wallet?.handle.split(".");
-      window.location.replace(`https://testnet.lenster.xyz/u/${lensHandle![0]}`);
+      window.location.replace(`${process.env.GASTBY_LENSTER_URL}/u/${lensHandle![0]}`);
       
     } catch(err) {
       console.log({ err })
@@ -202,10 +221,7 @@ const Index = () => {
     }
   }
 
-  async function createPost(zkproof: string) {
-    const params = new URLSearchParams(window.location.search)
-    const username = params.get('username')!;
-    const platform = params.get('id_platform')!;
+  async function createPost(zkproof: string, platform: string, username: string) {
 
     const postContent = "Gm folks! \n"+
                         "I just connected my " + platform + " with username "+ username + " \n" +
@@ -213,21 +229,23 @@ const Index = () => {
                         userInformation +
                         "Let's make social media sovereign!"; 
     try {
-      alert("Posting with: "+ userInformation);
+      //alert("Posting with: "+ userInformation);
 
-      showLoading();
+      if ( wallet == null || undefined)
+        alert("Wallet is null");
+      //showLoading();
       console.log(userInformation);
-    const result = await create({
-      content: postContent,
-      contentFocus: ContentFocus.TEXT_ONLY,
-      locale: 'en',
-    })
-    return result.toString();
-  }
-  catch(err) {
-    console.log(""+ err);
-    hideLoading();
-    alert(`Could not create profile due to: ${err}`);
+      const result = await create({
+        content: postContent,
+        contentFocus: ContentFocus.TEXT_ONLY,
+        locale: 'en',
+      })
+      return result.toString();
+    }
+    catch(err) {
+      console.log(""+ err);
+      hideLoading();
+      alert(`Could not create profile due to: ${err}`);
     }
     hideLoading();
   }
@@ -292,31 +310,37 @@ const Index = () => {
     connector: new InjectedConnector(),
   });
 
-  const onBeforeOAuthLoginClick = async () => {
+  const loginTwitter = async () => {
     // get twitter
+    if (wallet && !wallet.dispatcher)
+      await updateDispatcher({ enabled: true });
     await getTwitterID();
   };
-  const onAfterOAuthLoginClick = async () => {
+
+
+
+  const portProfileToLens = async (profileType:string, username: string) => {
 
     try {
-      if (chain.name !== "Polygon Mumbai") {
+      console.log(`Connecting ${profileType} with lens`);
+      if (chain!.name !== "Polygon Mumbai") {
         dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
         return;
       }
 
-      if (!wallet?.dispatcher) {
-        console.log("Updating dispatcher");
-        await updateDispatcher({ enabled: true });
-      }
-      else {
-        console.log("Dispatcher already set up");
-      }
+    let groupId; 
+    if (profileType == process.env.GATSBY_FACEBOOK)
+      groupId = process.env.GATSBY_FACEBOOK_GROUP_ID!;
+    else if (profileType == process.env.GATSBY_TWITTER)
+      groupId = process.env.GATSBY_TWITTER_GROUP_ID!;
+
 
     // get commitment
     showLoading();
 
     dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Posting user's commitment on chain" });
-    const res = await getCommitment();
+    const res =  await getCommitment(profileType, groupId);
+    
     if (!res) {
       hideLoading();
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User rejected the authentication request." });
@@ -324,30 +348,33 @@ const Index = () => {
     else {
         
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User's authentication commitment is now on chain" });
-      hideLoading();
+      //hideLoading();
 
       // get zk
       showLoading();
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Verifying zk proof on chain..." });
-      const result = await getZkProof();
-      hideLoading();
+      const result = await getZkProof(profileType, groupId);
+      //hideLoading();
 
-        if (result !== "") {
-          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation ownership proved" });
-        }
-        else
-          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation invalid" });
+      if (result !== "") {
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation ownership proved" });
+      }
+      else
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation invalid" });
+      
       // port to lens
-
+      //showLoading();
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Personalizing lens profile by adding your interests" });
       await addInterests();
-
+      //hideLoading();
+      
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Creating verification post on lens" });
-      await createPost(result);
+      await createPost(result, profileType, username);
 
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Updating lens profile to match your twitter data" });
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Updating lens profile to match your web2 profile data" });
       await updateProfile();
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Profile updated" });
+      hideLoading();
       }
     }
     catch (err)
@@ -357,15 +384,7 @@ const Index = () => {
     }
   };
 
-  
-  const [beforeOauth,setBeforeOauth] = useState(false);
-  const [afterOauth, setAfterOauth] = useState(false);
-  
-  const [state, dispatch] = useContext(MetaMaskContext);
 
-  const isMetaMaskReady = isLocalSnap(defaultSnapOrigin)
-    ? state.isFlask
-    : state.snapsDetected;
 
   const handleConnectClick = async () => {
     try {
@@ -383,45 +402,51 @@ const Index = () => {
   };
 
   useEffect(() => {
+    //use effect for twitter
     // get the proof request params for this popup
-     const params = new URLSearchParams(window.location.search)
-     const username = params.get('username')!;
-   
-     if (username!=null) {
-        setAfterOauth(true);
-        setTwitterConnected(true);
-     }
-    else 
-      setBeforeOauth(true);
+    const params = new URLSearchParams(window.location.search)
+    const username = params.get('username')!;
+    const platform = params.get('id_platform')!;
 
-      (window as any).fbAsyncInit = function() {
-        (window as any).FB.init({
-          appId            : '696970245672784',
-          autoLogAppEvents : true,
-          xfbml            : true,
-          version          : 'v18.0'
-        });
+    const twitter = async () => {
+     setUserInterests(getTwitterInterestsForLens(username));
+     //setUserInformation(getTwitterInformationForLens(username));
+     await portProfileToLens(platform, username);
+   }
 
-        (window as any).FB.AppEvents.logPageView();   
+    if (wallet && username!=null && platform == process.env.GATSBY_TWITTER && !isTwitterConnected) {
+       twitter().catch(console.error);
+       setTwitterConnected(true);
+    }
+  }, [wallet])
+
+  useEffect(() => {
+    // use effect for facebook
+    (window as any).fbAsyncInit = function() {
+      (window as any).FB.init({
+        appId            : '696970245672784',
+        autoLogAppEvents : true,
+        xfbml            : true,
+        version          : 'v18.0'
+      });
+
+      (window as any).FB.AppEvents.logPageView();   
 
 
-        (window as any).FB.getLoginStatus(function(response) {   // Called after the JS SDK has been initialized.
-          statusChangeCallback(response);        // Returns the login status.
-        });
+      (window as any).FB.getLoginStatus(function(response) {   // Called after the JS SDK has been initialized.
+        statusChangeCallback(response);        // Returns the login status.
+      });
         
-      };
+    };
 
-      (function(d, s, id) {
-        let js, fjs: any = d.getElementsByTagName(s)[0];
-        if (d.getElementById(id)) return;
-        js = d.createElement(s); js.id = id;
-        js.src = "https://connect.facebook.net/en_US/sdk.js";
-        fjs.parentNode.insertBefore(js, fjs);
-      }(document, 'script', 'facebook-jssdk'));
-
-
-    
-    }, [])
+    (function(d, s, id) {
+      let js, fjs: any = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s); js.id = id;
+      js.src = "https://connect.facebook.net/en_US/sdk.js";
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));  
+  }, [])
 
 
     function statusChangeCallback(response) {  // Called with the results from FB.getLoginStatus().
@@ -441,8 +466,8 @@ const Index = () => {
         console.log('Successful login for: ' + response.name);
         //alert('Thanks for logging in, ' + response.name + '!');
         
-        setUserInterests(getInterestsForLens(response));
-        setUserInformation(getInformationForLens(response));
+        setUserInterests(getFacebookInterestsForLens(response));
+        //setUserInformation(getFacebookInformationForLens(response));
         (window as any).FB.api(
           `/${response.id}`,
           function (response) {
@@ -451,7 +476,7 @@ const Index = () => {
               /* handle the result */
               console.log("Result from me: ");
               console.log(response);
-              setFacebookConnected(true);
+              //setFacebookConnected(true);
             }
           }
       );
@@ -462,9 +487,13 @@ const Index = () => {
     console.log(response);
     const accessToken = response.accessToken;
     console.log("Access token is: "+accessToken);
-    setUserInterests(getInterestsForLens(response));
-    setUserInformation(getInformationForLens(response));
+    setUserInterests(getFacebookInterestsForLens(response));
+    //setUserInformation(getFacebookInformationForLens(response));
+    if (wallet && !wallet.dispatcher)
+      await updateDispatcher({ enabled: true });
+    await portProfileToLens(process.env.GATSBY_FACEBOOK!, response.name);
     setFacebookConnected(true);
+    hideLoading();
   };
 
 
@@ -486,7 +515,7 @@ const Index = () => {
           <b> <Subtitle>{state.infoMessage} </Subtitle></b>
           </Notice>
         )}
-      
+
       <CardContainer style={{ justifyContent: Boolean(state.installedSnap) ? "center": "flex-start" }}>
 
         {state.error && (
@@ -494,7 +523,7 @@ const Index = () => {
             <b>An error happened:</b> {state.error.message}
           </ErrorMessage>
         )}
-        {/* Install Flask */}
+        {/* Workflow Step 0:  Install Flask */}
         {!isMetaMaskReady && (
           <Card
             content={{
@@ -507,7 +536,7 @@ const Index = () => {
           />
         )}
 
-        {/* Connect MetaMask Snap */}
+        {/* Workflow Step 0: Connect MetaMask Snap */}
         {!state.installedSnap && (
           <Card
             content={{
@@ -525,73 +554,87 @@ const Index = () => {
           />
         )}
 
-        {/* Install Flask */}
-        {afterOauth && (wallet == null || wallet==undefined) && (
+      {/* Workflow Step 1: Sign in to lens */}
+      {!wallet && isMetaMaskReady && (
           <Card
           content={{
-            title: 'Onboard using Twitter(X)',
+            title: 'Lens',
             description:
-              'Onboard to web3 social media Lens using your twitter profile.',
+              'Onboard to web3 social Lens.',
             button: (
-                <Authentication/>
+              <Authentication/>
             ),
           }}
-          disabled={!state.installedSnap || (wallet!=null && wallet!=undefined) || !isMetaMaskReady}
-          fullWidth={
-            Boolean(state.installedSnap) 
-          }
-        />
-
-        )}
-
-
-      {afterOauth && (wallet!=null && wallet!=undefined) && (
-          <Card
-          content={{
-            title: 'Onboard using Twitter(X)',
-            description:
-              'Onboard to web3 social media Lens using your twitter profile.',
-            button: (
-              <Button
-                disabled={!wallet}
-                onClick={onAfterOAuthLoginClick}
-              >  Connect profile to Lens
-              </Button>
-            ),
-          }}
-          disabled={!state.installedSnap || !wallet }
-          fullWidth={
-            Boolean(state.installedSnap) 
-          }
-        />
-
-        )}
-
-        {beforeOauth && (
-          <Card
-          content={{
-            title: 'Onboard using Twitter(X)',
-            description:
-              'Onboard to web3 social media Lens using your Twitter profile.',
-            button: (
-              <Button
-                onClick={onBeforeOAuthLoginClick}
-                disabled={!isMetaMaskReady || !state.installedSnap}
-              > Authenticate
-              </Button>
-            ),
-          }}
-          connected={ isTwitterConnected }
           disabled={!state.installedSnap || !isMetaMaskReady}
         />
 
         )}
-        {beforeOauth && (
+
+      {/* Workflow Step 1: Sign in to orbis */}
+      {!wallet && isMetaMaskReady &&(
           <Card
           content={{
-            title: 'Onboard using Facebook',
+            title: 'Orbis',
             description:
-              'Onboard to web3 social media Lens using your Facebook profile.',
+              'Onboard to web3 social Orbis',
+            button: (
+              <Button
+                disabled={ true}
+                //onClick={onAfterOAuthLoginClick}
+              >  Sign in
+              </Button>
+            ),
+          }}
+          disabled={true}
+        />
+        )}
+        {/* Workflow Step 1: Sign in to farcaster */}
+        {!wallet && isMetaMaskReady && (
+          <Card
+          content={{
+            title: 'Farcaster',
+            description:
+              'Onboard to web3 social Farcaster',
+            button: (
+              <Button
+                disabled={ true }
+                //onClick={onAfterOAuthLoginClick}
+              >  Sign in
+              </Button>
+            ),
+          }}
+          disabled={ true }
+        />
+        )}
+
+      {/* Workflow Step 2: Connect twitter */}
+        {wallet && (
+          <Card
+          content={{
+            title: 'Twitter (X)',
+            description:
+              'Connect your twitter profile to your web3 socials',
+            button: (
+              <Button
+                onClick={loginTwitter}
+                disabled={!isMetaMaskReady || !state.installedSnap}
+              > Login with X
+              </Button>
+            ),
+          }}
+          connected={ isTwitterConnected }
+          disabled={!state.installedSnap || !isMetaMaskReady || isTwitterConnected}
+        />
+
+        )}
+      
+      {/* Workflow Step 2: Connect Facebook */}
+        {wallet && (
+          <Card
+          content={{
+            title: 'Facebook',
+            description:
+              'Connect your Facebook profile to your web3 socials.',
             button: (
               <FacebookLogin
               appId="696970245672784"
@@ -603,19 +646,20 @@ const Index = () => {
             ),
           }}
           connected={ isFacebookConnected }
-          disabled={!state.installedSnap || !isMetaMaskReady}
+          disabled={!state.installedSnap || !isMetaMaskReady || isFacebookConnected}
         />
-
         )}
-        {beforeOauth && (
+
+        {/* Workflow Step 2: Connect TikTok */}
+        {wallet && (
           <Card
           content={{
-            title: 'Onboard using TikTok',
+            title: 'TikTok',
             description:
-              'Onboard to web3 social media Lens using your Instagram profile.',
+              'Connect your TikTok profile to your web3 socials.',
             button: (
               <Button
-                onClick={onBeforeOAuthLoginClick}
+                //onClick={loginTwitter}
                 disabled={true}
               >  Authenticate
               </Button>
@@ -625,15 +669,15 @@ const Index = () => {
         />
 
         )}
-        {beforeOauth && (
+        {wallet && (
           <Card
           content={{
-            title: 'Onboard using Instagram',
+            title: 'Instagram',
             description:
-              'Onboard to web3 social media Lens using your LinkedIn profile.',
+              'Connect your Instragram profile to your web3 socials.',
             button: (
               <Button
-                onClick={onBeforeOAuthLoginClick}
+                //onClick={onBeforeOAuthLoginClick}
                 disabled={true}
               >  Authenticate
               </Button>

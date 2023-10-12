@@ -12,7 +12,7 @@ let network: string;
 let isInitialized = false;
 let merkleTreeDepth = 20;
 const signal = 1;
-const groupId:string = process.env.GATSBY_GROUP_ID!;
+//const groupId:string = process.env.GATSBY_GROUP_ID!;
 
 export const init = async () => {
 
@@ -38,7 +38,7 @@ export const init = async () => {
 
 
 
-export const createGroup = async () => {
+export const createGroup = async (groupId: string) => {
 
   if (!isInitialized) {
       await init();
@@ -71,7 +71,7 @@ export const createGroup = async () => {
       }
   };
 
-  export const addMemberToGroup = async (identityCommitment: any) => {
+  export const addMemberToGroup = async (identityCommitment: any, groupId: string) => {
     if (!isInitialized) {
       await init();
     }
@@ -98,7 +98,7 @@ export const createGroup = async () => {
     return receipt;
   };
 
-  export const verifyZKProofSentByUser = async (fullProof: any) => {
+  export const verifyZKProofSentByUser = async (fullProof: any, groupId: string) => {
 
     let txUrl = "";
     if (!isInitialized) {

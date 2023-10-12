@@ -1,7 +1,7 @@
 const webpack = require("webpack");
 
-exports.onCreateWebpackConfig = ({ actions, plugins, stage }) => {
-  if (stage === "build-html" || stage === "develop") {
+exports.onCreateWebpackConfig = ({ actions, plugins, loaders, stage }) => {
+  if (stage === "build-html" || stage === 'develop') {
     actions.setWebpackConfig({
       watchOptions: {
         aggregateTimeout: 200,
@@ -28,6 +28,19 @@ exports.onCreateWebpackConfig = ({ actions, plugins, stage }) => {
                 process: 'process/browser',
           })
         ],
+        
     })
   }
+  if (stage === 'build-html' || stage === 'develop-html') { 
+    actions.setWebpackConfig({ 
+      module: { 
+        rules: [ 
+          { 
+            test: /react-checkmark/, 
+            use: loaders.null(), 
+          }, 
+        ], 
+      }, 
+    }); 
+  } 
 }

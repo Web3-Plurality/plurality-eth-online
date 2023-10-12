@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import styled from 'styled-components';
-//import { Checkmark } from 'react-checkmark';
+import { Checkmark } from 'react-checkmark';
 
 
 type CardProps = {
@@ -57,9 +57,9 @@ export const Card = ({ content, disabled = false, fullWidth, connected }: CardPr
   const { title, description, button } = content;
   return (
     <CardWrapper fullWidth={fullWidth} disabled={disabled}>
-      {/*{connected && (
+      {connected && (
         <Checkmark size="small"/>
-      )}*/}
+      )}
       {title && (
         <Title>{title} </Title>
       )}

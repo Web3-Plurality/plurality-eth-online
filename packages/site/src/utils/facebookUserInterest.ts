@@ -1,4 +1,4 @@
-export const getInterestsForLens = (userProfile: any) => { 
+export const getFacebookInterestsForLens = (userProfile: any) => { 
     var interests:string[] = [];
     const favoriteAthletes = userProfile.favorite_athletes;
     const music = userProfile.music;
@@ -30,10 +30,10 @@ export const getInterestsForLens = (userProfile: any) => {
     return interests;
 }
 
-export const getInformationForLens = (userProfile: any) => { 
-    const ageRangeMin = userProfile.age_range.min;
+export const getFacebookInformationForLens = (userProfile: any) => { 
+    const ageRangeMin = userProfile.age_range?.min;
     const gender = userProfile.gender;
-    const hometown = userProfile.hometown.name;
+    const hometown = userProfile.hometown?.name;
     const likes = userProfile.likes;
     var pages: string[] = [];
     if (likes) {

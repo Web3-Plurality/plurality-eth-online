@@ -74,19 +74,19 @@ export const sendHello = async () => {
  * Invoke the "commitment_request" & "commitment_request" method from the example snap.
  */
 
-export const getCommitment = async (): Promise<boolean> => {
+export const getCommitment = async (profileType: string, groupId: string): Promise<boolean> => {
   let acceptance = await window.ethereum.request({
     method: 'wallet_invokeSnap',
-    params: { snapId: defaultSnapOrigin, request: { method: 'commitment_request', params: {source:"twitter"} }},
+    params: { snapId: defaultSnapOrigin, request: { method: 'commitment_request', params: {source:profileType} }},
   });
   if (acceptance) {
     let commitment = await window.ethereum.request({
       method: 'wallet_invokeSnap',
-      params: { snapId: defaultSnapOrigin, request: { method: 'commitment_fetch', params: {source:"twitter"} } },
+      params: { snapId: defaultSnapOrigin, request: { method: 'commitment_fetch', params: {source:profileType} } },
     });
     console.log(commitment);
-    await createGroup();
-    await addMemberToGroup(commitment);
+    await createGroup(groupId);
+    await addMemberToGroup(commitment, groupId);
     return true;
   }
   else {
@@ -98,10 +98,10 @@ export const getCommitment = async (): Promise<boolean> => {
 /** 
 * Invoke the "zkproof_request" method from the example snap.
 */
-export const getZkProof = async () : Promise<string> => {
+export const getZkProof = async (profileType: string, groupId: string) : Promise<string> => {
  let identityString = await window.ethereum.request({
    method: 'wallet_invokeSnap',
-   params: { snapId: defaultSnapOrigin, request: { method: 'zkproof_request', params: {source:"twitter"} } },
+   params: { snapId: defaultSnapOrigin, request: { method: 'zkproof_request', params: {source:profileType} } },
  });
   console.log(identityString);
 
@@ -112,7 +112,7 @@ export const getZkProof = async () : Promise<string> => {
     address: process.env.GATSBY_SEMAPHORE_IDENTITY_CONTRACT,
     startBlock: 4269200
   });
-  const groupId = process.env.GATSBY_GROUP_ID!;
+
   console.log("using group id: "+groupId);
   const groupIds = await semaphoreEthers.getGroupIds()
   console.log(groupIds);
@@ -140,7 +140,7 @@ export const getZkProof = async () : Promise<string> => {
   console.log(proof); 
 
   // zk proof verification
-  const txUrl = await verifyZKProofSentByUser(proof);
+  const txUrl = await verifyZKProofSentByUser(proof, groupId);
   if (txUrl!="") {
     //alert("Proof is valid");
     //return JSON.stringify(proof);

@@ -5,6 +5,7 @@ import LoadingContext from '../components/LoadingContext';
 import { useNetwork } from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from 'react-bootstrap';
+import { MetaMaskContext, MetamaskActions } from '../hooks/MetamaskContext';
 
 
 export function Authentication() {
@@ -15,34 +16,40 @@ export function Authentication() {
     const { disconnectAsync } = useDisconnect();
     const { execute, isPending } = useCreateProfile();  
     const [registerProfile, isRegisterProfile] = useState(false);
-    const { showLoading, hideLoading } = useContext(LoadingContext)
-  
+    const { showLoading, hideLoading } = useContext(LoadingContext);
+    const [state, dispatch] = useContext(MetaMaskContext);
+
     const { chain, chains } = useNetwork();
+    const {
+      execute: updateDispatcher,
+      error: errorDispatcher,
+      isPending: isPendingDispatcher,
+    } = useUpdateDispatcherConfig({ profile: wallet! });
   
     async function createLensProfile (handle:string): Promise<string>  {
       try {
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Trying to create lens profile with handle: "+handle });
         console.log("Trying to create lens profile with handle: "+handle);
         const result = await execute({ handle });
    
         if (result.isSuccess()) {
-          //alert("Please refresh the browser to sign in!");
           window.location.reload();
-          isRegisterProfile(false);
           return "SUCCESS";
         }
    
         switch (result.error.constructor) {
           case DuplicatedHandleError:
+            dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Handle already taken" });
             console.log("Handle already taken");
-            isRegisterProfile(false);
             return "DUPLICATE"
           default:
+            dispatch({ type: MetamaskActions.SetInfoMessage, payload: `Could not create profile due to: ${result.error.message}` });
             alert(`Could not create profile due to: ${result.error.message}`);
-            isRegisterProfile(false);
             return "ERROR";
         }
       } catch (e) {
         console.error(e);
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: `Could not create profile due to: ${e}` });
         alert(`Could not create profile due to: ${e}`);
       }
       return "";
@@ -53,6 +60,13 @@ export function Authentication() {
     });
   
     const onLoginClick = async () => {
+
+      //TODO: Check if this check is actually required
+      if (chain!.name !== "Polygon Mumbai") {
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
+        return;
+      }
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Signing in your lens profile" });
       showLoading();
       if (isConnected) {
         await disconnectAsync();
@@ -70,21 +84,20 @@ export function Authentication() {
         if (result.isSuccess()) {
           if (result.value == null)
           {
-            isRegisterProfile(true);
-            alert("No lens profile found. Creating one..");
-              const params = new URLSearchParams(window.location.search)
-              let username = params.get('username')!;
-              const response = await createLensProfile(username);
-              if (response == "DUPLICATE")
-              {
-                alert("The lens handle matching your twitter username is already taken. Trying a new random handle");
-                const min = 1;
-                const max = 100000;
-                let rand = min + Math.floor(Math.random() * (max - min));
-                username=username+rand;
-                await createLensProfile(username);
-              }
+            dispatch({ type: MetamaskActions.SetInfoMessage, payload: "No lens profile found with this address. Creating one.." });
+            let username = window.prompt("Please provide your preferred lens handle");
+            const response = await createLensProfile(username!);
+            if (response == "DUPLICATE")
+            {
+              dispatch({ type: MetamaskActions.SetInfoMessage, payload: "The lens handle matching your preferred username is already taken. Adding some randomness for uniqueness" });
+              const min = 1;
+              const max = 100000;
+              let rand = min + Math.floor(Math.random() * (max - min));
+              username=username!+rand;
+              await createLensProfile(username);
+            }
           }
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "" });
         } else {
           alert(result.error.message);
           hideLoading();
@@ -104,12 +117,12 @@ export function Authentication() {
   
         {loading && <p>Loading...</p>}
       
-        {!wallet && !loading && !registerProfile && (
+        {!wallet && !loading && (
           <Button
             disabled={isLoginPending}
             onClick={onLoginClick}
           >
-            Sign in with lens
+            Sign in
           </Button>
           
         )}
