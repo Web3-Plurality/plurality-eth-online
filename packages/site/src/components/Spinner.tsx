@@ -1,5 +1,4 @@
 import React, { useContext } from 'react'
-//import { Wrapper, SpinningCircle } from './spinner.styles'
 import LoadingContext from './LoadingContext';
 import styled, { keyframes } from 'styled-components'
 

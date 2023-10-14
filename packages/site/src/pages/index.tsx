@@ -33,10 +33,14 @@ import { Button } from 'react-bootstrap';
 import LoadingContext from '../components/LoadingContext';
 import FacebookLogin from 'react-facebook-login';
 import { LensClient, development } from "@lens-protocol/client";
-import { getTwitterInformationForLens, getTwitterInterestsForLens } from '../utils/twitterUserInterest';
-import { getFacebookInformationForLens, getFacebookInterestsForLens } from '../utils/facebookUserInterest';
+import { getTwitterInterestsForLens } from '../utils/twitterUserInterest';
+import { getFacebookInterestsForLens } from '../utils/facebookUserInterest';
 import { Authentication } from '../components/Authentication';
-
+import { ModalBoxInterests } from '../components/InterestsListModal';
+import { translateInterests } from '../utils/interests';
+import { ShareModal } from '../components/ShareModal';
+import useWindowSize from 'react-use/lib/useWindowSize'
+import Confetti from 'react-confetti'
 
 const Container = styled.div`
   display: flex;
@@ -142,39 +146,93 @@ const ErrorMessage = styled.div`
 
 
 const Index = () => {
-  const [hidden, isHidden] = useState(true);
-  const [isFacebookConnected, setFacebookConnected] = useState(false);
-  const [isTwitterConnected, setTwitterConnected] = useState(false);
 
-  const { showLoading, hideLoading } = useContext(LoadingContext)
+  // Lens hooks 
+  const { data: wallet, loading } = useActiveProfile();
+  const { execute: create, error, isPending: isPendingCreatePost } = useCreatePost({ publisher: wallet!, upload: uploadJson });
+  const { execute: update, error: updateError, isPending: isUpdatePending } = useUpdateProfileDetails({ profile: wallet!, upload: uploadJson });
+  const { execute: updateDispatcher, error: errorDispatcher, isPending: isPendingDispatcher } = useUpdateDispatcherConfig({ profile: wallet! });
   const { isConnected } = useAccount();
   const { disconnectAsync } = useDisconnect();
 
-  const { data: wallet, loading } = useActiveProfile();
+  // spinner context hook
+  const { showLoading, hideLoading } = useContext(LoadingContext)
 
-  const { execute: create, error, isPending: isPendingCreatePost } = useCreatePost({ publisher: wallet!, upload: uploadJson });
-  const { execute: update, error: updateError, isPending: isUpdatePending } = useUpdateProfileDetails({
-    profile: wallet!,
-    upload: uploadJson
-  });
-  const {
-    execute: updateDispatcher,
-    error: errorDispatcher,
-    isPending: isPendingDispatcher,
-  } = useUpdateDispatcherConfig({ profile: wallet! });
+  //confetti hook
+  const { width, height } = useWindowSize();
+  const [lensProfileSuccess, setLensProfileSuccess] = useState(false);
+
+
+  // facebook and twitter info
+  const [isFacebookConnected, setFacebookConnected] = useState(false);
+  const [isTwitterConnected, setTwitterConnected] = useState(false);
+  const [isTwitterUseEffectCalled, setTwitterUseEffectCalled] = useState(false);
+
+  // check connected network hook
   const { chain, chains } = useNetwork();
-  const [userInterests, setUserInterests] = useState<string[]>([]);
-  const [userInformation, setUserInformation] = useState("");
-  
-  
-  const [state, dispatch] = useContext(MetaMaskContext);
 
+  // interests modal dialog hook
+  const [show, setShow] = useState(false);
+  const [userInterests, setUserInterests] = useState<string[]>([]);
+  const [userInterestsLabels, setUserInterestsLabels] = useState<{value: string,label: string}[]>([]);
+  const [interestsUpdated, setInterestsUpdated] = useState(false);
+
+  // share modal hook
+  const [share, setShare] = useState(false);
+
+
+  const [hidden, isHidden] = useState(true);  
+  const [userInformation, setUserInformation] = useState("");
+
+  // metamask hooks
+  const [state, dispatch] = useContext(MetaMaskContext);
   const isMetaMaskReady = isLocalSnap(defaultSnapOrigin)
     ? state.isFlask
     : state.snapsDetected;
 
+    
+  const delay = ms => new Promise(
+    resolve => setTimeout(resolve, ms)
+  );
 
+  const handleClose = async () => {
+    if (interestsUpdated) {
+      showLoading();
+      await addInterests();
+      setShow(false);
+      hideLoading();
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 Lens profile succesfully personalized 🎉" });
+      setLensProfileSuccess(true);
+      await delay(5000);
+      setLensProfileSuccess(false);
+      onShareOpen();
+    }
+  }
+  const handleShow = () => {
+    setShow(true);
+  }
+  
+  const handleChangeInterests = (e) => {
+    let newInterests:string[] = [];
+    setUserInterests(newInterests);
+    for (let i=0;i<e.length;i++)
+    {
+      newInterests.push(e[i].value);
+    }
+    setUserInterests(newInterests);
+    setInterestsUpdated(true);
+    console.log("INTERESTS UPDATED!!!");
+  }
 
+  const onShareOpen = async () => {
+    setShare(true);
+  }
+  const onShareClose = () => {
+    setShare(false);
+    //alert("Taking you to your lens profile");
+    const lensHandle = wallet?.handle.split(".");
+    window.open(`${process.env.GASTBY_LENSTER_URL}/u/${lensHandle![0]}`,"_blank");
+  }
   async function uploadJson(data: unknown){
     try {
       console.log("uploading post with data: "+ JSON.stringify(data));
@@ -207,14 +265,8 @@ const Index = () => {
         x: "https://x.com/"+username,
         test: "https://google.com"
       };
-      showLoading();
       await update({ name, bio, attributes });
-      hideLoading();
-      console.log("Profile updated");
-      alert("Taking you to your lens profile");
-      const lensHandle = wallet?.handle.split(".");
-      window.location.replace(`${process.env.GASTBY_LENSTER_URL}/u/${lensHandle![0]}`);
-      
+      console.log("Profile updated");      
     } catch(err) {
       console.log({ err })
       hideLoading();
@@ -289,6 +341,7 @@ const Index = () => {
         console.log("Profile interests were: "+await lensClient.profile.allInterests());
         // add interests
         console.log(userInterests);
+
         await lensClient.profile.addInterests({
           interests: userInterests,
           profileId,
@@ -323,6 +376,7 @@ const Index = () => {
 
     try {
       console.log(`Connecting ${profileType} with lens`);
+      console.log("Chain name is: "+ chain!.name);
       if (chain!.name !== "Polygon Mumbai") {
         dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
         return;
@@ -351,7 +405,7 @@ const Index = () => {
       //hideLoading();
 
       // get zk
-      showLoading();
+      //showLoading();
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Verifying zk proof on chain..." });
       const result = await getZkProof(profileType, groupId);
       //hideLoading();
@@ -361,27 +415,27 @@ const Index = () => {
       }
       else
         dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation invalid" });
-      
+
       // port to lens
-      //showLoading();
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Personalizing lens profile by adding your interests" });
-      await addInterests();
-      //hideLoading();
-      
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Creating verification post on lens" });
       await createPost(result, profileType, username);
 
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Updating lens profile to match your web2 profile data" });
       await updateProfile();
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Profile updated" });
+            
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Personalizing lens profile by adding your interests" });
+      handleShow();
       hideLoading();
       }
     }
     catch (err)
     {
+      console.log(err);
       hideLoading();
-      alert(err);
+      alert("Error in updating: "+ err);
     }
+    hideLoading();
   };
 
 
@@ -409,14 +463,17 @@ const Index = () => {
     const platform = params.get('id_platform')!;
 
     const twitter = async () => {
-     setUserInterests(getTwitterInterestsForLens(username));
+     const interests = getTwitterInterestsForLens(username);
+     setUserInterests(interests);
+     setUserInterestsLabels(translateInterests(interests));
      //setUserInformation(getTwitterInformationForLens(username));
+     setTwitterUseEffectCalled(true);
      await portProfileToLens(platform, username);
+     setTwitterConnected(true);
    }
 
-    if (wallet && username!=null && platform == process.env.GATSBY_TWITTER && !isTwitterConnected) {
+    if (wallet && username!=null && platform == process.env.GATSBY_TWITTER && !isTwitterConnected && !isTwitterUseEffectCalled) {
        twitter().catch(console.error);
-       setTwitterConnected(true);
     }
   }, [wallet])
 
@@ -466,7 +523,10 @@ const Index = () => {
         console.log('Successful login for: ' + response.name);
         //alert('Thanks for logging in, ' + response.name + '!');
         
-        setUserInterests(getFacebookInterestsForLens(response));
+        //setUserInterests(getFacebookInterestsForLens(response));
+        const interests = getFacebookInterestsForLens(response);
+        setUserInterests(interests);
+        setUserInterestsLabels(translateInterests(interests));
         //setUserInformation(getFacebookInformationForLens(response));
         (window as any).FB.api(
           `/${response.id}`,
@@ -487,7 +547,10 @@ const Index = () => {
     console.log(response);
     const accessToken = response.accessToken;
     console.log("Access token is: "+accessToken);
-    setUserInterests(getFacebookInterestsForLens(response));
+
+    const interests = getFacebookInterestsForLens(response);
+     setUserInterests(interests);
+     setUserInterestsLabels(translateInterests(interests));
     //setUserInformation(getFacebookInformationForLens(response));
     if (wallet && !wallet.dispatcher)
       await updateDispatcher({ enabled: true });
@@ -496,27 +559,34 @@ const Index = () => {
     hideLoading();
   };
 
-
   return (
     <Container>
+      
       <Heading>
         Join web3 social using <Span>Plurality</Span>
       </Heading>
       <Subtitle>
       Connect your web2 socials and bring your reputation with you! 
       </Subtitle>
-        {!hidden && (
+        {/*{!hidden && (
           <Message>
           Connecting on chain...
           </Message>
-        )}
+        )}*/}
       {state.infoMessage && (
         <Notice>
           <b> <Subtitle>{state.infoMessage} </Subtitle></b>
           </Notice>
         )}
-
+      
+      <ModalBoxInterests show={show} handleClose={handleClose} onChange={handleChangeInterests} userInterests={userInterestsLabels}/>
+      <ShareModal share={share} handle={`${process.env.GASTBY_LENSTER_URL}/u/${wallet?.handle.split(".")[0]}`} handleClose={onShareClose}></ShareModal>
+      {lensProfileSuccess && (
+        <Confetti tweenDuration= { 2000 } width={width} height={height} />
+      )}
+      
       <CardContainer style={{ justifyContent: Boolean(state.installedSnap) ? "center": "flex-start" }}>
+
 
         {state.error && (
           <ErrorMessage>
@@ -694,7 +764,7 @@ const Index = () => {
             <b> {state.infoMessage}</b>
           </Message>
         )}*/}
-        
+
 
       </CardContainer>
 
