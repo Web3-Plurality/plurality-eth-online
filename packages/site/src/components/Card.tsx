@@ -57,12 +57,16 @@ export const Card = ({ content, disabled = false, fullWidth, connected }: CardPr
   const { title, description, button } = content;
   return (
     <CardWrapper fullWidth={fullWidth} disabled={disabled}>
-      {connected && (
-        <Checkmark size="small"/>
-      )}
-      {title && (
-        <Title>{title} </Title>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        {title && (
+          <Title>{title}</Title>
+        )}
+        {connected && (
+          <div style={{ margin: '5px'}}>
+            <Checkmark size="medium"/>
+          </div>
+        )}
+      </div>
       <Description>{description}</Description>
       {button}
     </CardWrapper>

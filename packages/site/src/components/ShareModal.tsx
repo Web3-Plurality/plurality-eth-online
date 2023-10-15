@@ -45,11 +45,13 @@ export function ShareModal( props: any ) {
             <br />
             <Subtitle>Share with your network</Subtitle>
             <p>Share your personalized link with your network and earn rewards</p>
-            <p>{props.handle}
-            <CopyToClipboard text={ message }>
+            <div style={{display: 'flex', flexDirection: 'column', width: '60%',overflow:'hidden', margin: 'auto'}}>
+              {/* <input type="text" disabled={ true } placeholder={ props.handle } style={{textAlign:'center', overflow:'hidden', width:'60%'}}/> */}
+              <textarea name="msgToShare" id="msgToShare" cols={30} rows={10} placeholder={ message } style={{resize: 'none'}} disabled></textarea>
+              <CopyToClipboard text={ message } style={{width: '30%', margin: 'auto', marginTop: '15px', marginBottom: '10px'}}>
                 <Button>Copy</Button>
-            </CopyToClipboard>
-            </p>
+              </CopyToClipboard>
+            </div>
 
             <FacebookShareButton url={props.handle} quote={message}><FacebookIcon size={32} round={true} /></FacebookShareButton> &nbsp;
             <TwitterShareButton url={props.handle} title={"I just joined web3 social"} hashtags={["Plurality", "Web3Social"]}><TwitterIcon size={32} round={true} /></TwitterShareButton> &nbsp;
@@ -57,7 +59,7 @@ export function ShareModal( props: any ) {
             <RedditShareButton url={props.handle} title={"Join my web3 social network"}><RedditIcon size={32} round={true} ></RedditIcon></RedditShareButton> &nbsp;
             <TelegramShareButton url={props.handle} title={"Join my web3 social network"}><TelegramIcon size={32} round={true} ></TelegramIcon></TelegramShareButton> &nbsp;
             </div>
-            <Button onClick={props.handleClose}>OK</Button>
+            <Button onClick={props.handleClose} style={{marginTop: '15px'}}>Take me to my profile</Button>
           </Modal>
         ) : null}
         </Fragment>

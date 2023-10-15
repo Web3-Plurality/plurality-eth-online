@@ -1,6 +1,6 @@
 import styled, { useTheme } from 'styled-components';
 import { getThemePreference } from '../utils';
-import { SnapLogo } from './SnapLogo';
+import { PluralityLogo } from './PluralityLogo';
 import { Toggle } from './Toggle';
 
 import {
@@ -131,7 +131,7 @@ export const Header = ({
   return (
     <HeaderWrapper>
       <LogoWrapper>
-        <SnapLogo color={theme.colors.icon.default} size={36} />
+        <PluralityLogo color={theme.colors.icon.default} size={36} />
         <Title>Plurality</Title>
       </LogoWrapper>
       <RightContainer>

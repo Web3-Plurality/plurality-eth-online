@@ -4,7 +4,7 @@ import Button from "@atlaskit/button";
 import Select from "react-select";
 import { lensInterests } from "../utils/interests";
 import styled from "styled-components";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 const Subtitle = styled.p`
   font-size: ${({ theme }) => theme.fontSizes.large};
@@ -15,28 +15,74 @@ const Subtitle = styled.p`
     font-size: ${({ theme }) => theme.fontSizes.text};
   }
 `;
+
+const Item = styled.button`
+margin: 5px 4px 5px
+`;
 export function ModalBoxInterests( props: any ) {
-    const [value, setValue] = useState<any>();
+    const [selectedValues, setSelectedValues] = useState<any>(props.userInterests)
+
+    useEffect(() => {
+      setSelectedValues(props.userInterests)
+    }, [props.show]);
+
+    useEffect(() => {
+      props.onChange(selectedValues)
+    }, [selectedValues]);
+
+    const handleClick = (event) => {
+      for (let interest of lensInterests) {
+        if (interest.label === event.target.id)
+          {
+            let duplicated = false
+            for (let selectedValue of selectedValues) {
+              if (selectedValue === interest) {
+                console.log('duplicated')
+                duplicated = true
+                break;
+              }
+            }
+            if (!duplicated) 
+            {
+              setSelectedValues([...selectedValues, interest])   
+            }
+          }
+      }
+    }
+
+    const handleChange = (event) => {
+      setSelectedValues(event)
+    }
+
+    const interests = ['Books', 'Art', 'Design', 'Photography', 'Fashion', 'Anime', 'Memes', 'Films', 'Music']
 
     return (
         <Fragment>
         { props.show ? (
         <Modal onClose={props.handleClose}>
-            <div style={{textAlign:'center'}}>
+            <div style={{textAlign:'center', marginLeft: '2%', marginRight: '2%'}}>
             <br />
             <Subtitle>Your interests</Subtitle>
             <p>We found the following interests. Please select if there is something else you are interested in</p>
             </div>
             <Select
-              defaultValue={props.userInterests}
+              value={selectedValues}
               isMulti
               className="basic-multi-select"
               classNamePrefix="select"
-              styles={{ menuPortal: base => ({ ...base, zIndex: 10000 }) }}
+              styles={{ menuPortal: base => ({ ...base, zIndex: 10000 }), marginLeft: '2%', marginRight: '2%' }}
               menuPortalTarget={document.body}
               options={lensInterests}
-              onChange={(e)=>{setValue(e); props.onChange(e)}}
+              onChange={(e)=>{console.log(e); handleChange(e); props.onChange(e)}}
             />
+            <div style={{marginLeft: '2%', marginRight: '2%', marginTop: '1%', marginBottom: '1%'}}>
+              <div>
+                <p style={{fontWeight:'bold', marginLeft: '5px'}}>Most frequently picked topics: </p>
+              </div>
+              <div style={{display: 'flex', flexWrap: 'wrap'}}>
+                { interests.map(interest => <Item key={interest} id={interest} onClick={handleClick}>{interest}</Item>) }
+              </div>
+            </div>
             <Button onClick={props.handleClose}>Save changes</Button>
           </Modal>
         ) : null}

@@ -221,29 +221,29 @@ const Index = () => {
   );
 
   const handleClose = async () => {
-    if (interestsUpdated) {
-      showLoading();
-      if (wallet) {
-        await addInterestsToLens();
-        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 Lens profile successfully personalized 🎉" });
-      }
-      else if (orbisUser || (signedInUser == "orbis")) {
-        await addInterestsToOrbis();
-        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 Orbis profile successfully personalized 🎉" });
-      }
-      setShow(false);
-      hideLoading();
-      setLensProfileSuccess(true);
-      await delay(5000);
-      setLensProfileSuccess(false);
-      onShareOpen();
+    showLoading();
+    if (wallet) {
+      await addInterestsToLens();
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 Lens profile successfully personalized 🎉" });
     }
+    else if (orbisUser || (signedInUser == "orbis")) {
+      await addInterestsToOrbis();
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 Orbis profile successfully personalized 🎉" });
+    }
+    setShow(false);
+    hideLoading();
+    setLensProfileSuccess(true);
+    await delay(5000);
+    setLensProfileSuccess(false);
+    onShareOpen();
   }
   const handleShow = () => {
     setShow(true);
   }
   
   const handleChangeInterests = (e) => {
+    console.log('in Index:')
+    console.log(e)
     let newInterests:string[] = [];
     setUserInterests(newInterests);
     for (let i=0;i<e.length;i++)
