@@ -61,11 +61,11 @@ export function Authentication() {
   
     const onLoginClick = async () => {
 
-      //TODO: Check if this check is actually required
-      if (chain!.name !== "Polygon Mumbai") {
-        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
-        return;
-      }
+
+     // if (chain!.name !== "Polygon Mumbai") {
+     //   dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
+     //   return;
+     // }
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Signing in your lens profile" });
       showLoading();
       if (isConnected) {

@@ -31,7 +31,7 @@ import {
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from 'react-bootstrap';
 import LoadingContext from '../components/LoadingContext';
-import FacebookLogin from 'react-facebook-login';
+import FacebookLogin from 'react-facebook-login/dist/facebook-login-render-props';
 import { LensClient, development } from "@lens-protocol/client";
 import { getTwitterInterestsForLens } from '../utils/twitterUserInterest';
 import { getFacebookInterestsForLens } from '../utils/facebookUserInterest';
@@ -375,12 +375,12 @@ const Index = () => {
   const portProfileToLens = async (profileType:string, username: string) => {
 
     try {
-      console.log(`Connecting ${profileType} with lens`);
-      console.log("Chain name is: "+ chain!.name);
-      if (chain!.name !== "Polygon Mumbai") {
-        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
-        return;
-      }
+      //console.log(`Connecting ${profileType} with lens`);
+      //console.log("Chain name is: "+ chain!.name);
+      //if (chain!.name !== "Polygon Mumbai") {
+      //  dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
+      //  return;
+      //}
 
     let groupId; 
     if (profileType == process.env.GATSBY_FACEBOOK)
@@ -712,6 +712,9 @@ const Index = () => {
               fields="name,picture,gender,inspirational_people,languages,meeting_for,quotes,significant_other,sports, music, photos, age_range, favorite_athletes, favorite_teams, hometown, feed, likes "
               callback={responseFacebook}
               scope="public_profile, email, user_hometown, user_likes, user_friends, user_gender, user_age_range"
+              render={renderProps => (
+                <button onClick={renderProps.onClick}>Login with Facebook</button>
+              )}
             />
             ),
           }}
