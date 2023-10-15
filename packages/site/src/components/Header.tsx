@@ -1,20 +1,14 @@
-//"use client";
-import { FormEvent, useContext, useState } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { MetamaskActions, MetaMaskContext } from '../hooks';
-import { connectSnap, getThemePreference, getSnap } from '../utils';
-import { HeaderButtons } from './Buttons';
+import { getThemePreference } from '../utils';
 import { SnapLogo } from './SnapLogo';
 import { Toggle } from './Toggle';
-import { isValidHandle, useCreateProfile, DuplicatedHandleError, useUpdateDispatcherConfig } from '@lens-protocol/react-web';
 
 import {
-  useWalletLogin,
   useWalletLogout,
   useActiveProfile,
 } from "@lens-protocol/react-web";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { InjectedConnector } from "wagmi/connectors/injected";
+import useLocalStorageState from 'use-local-storage-state';
+
 
 
 
@@ -61,17 +55,51 @@ const Button = styled.button`
 `;
 
   export function Signout() {
-    const { data: wallet, loading } = useActiveProfile();
     const { execute: logout } = useWalletLogout();  
+    const [signedInUser, setSignedInUser, { removeItem: removeSignedInUser }] = useLocalStorageState('signedInUser', {defaultValue: ""});
+    const [did, setDid, { removeItem: removeDid }] = useLocalStorageState('did', {defaultValue: ""});
+    const [rejectDouble, setRejectDouble, { removeItem: removeReject}] = useLocalStorageState('rejectDouble', {defaultValue: ""});
+    const [isFacebookConnected, setFacebookConnected, { removeItem: removeFacebookConnected}] = useLocalStorageState('isFacebookConnected', {defaultValue: false});
+    const [isTwitterConnected, setTwitterConnected, { removeItem: removeTwitterConnect}] = useLocalStorageState('isTwitterConnected', {defaultValue: false});
+
+    const removeEntireLocalState = async() => {
+      removeSignedInUser();
+      removeDid();
+      removeReject();
+      removeFacebookConnected();
+      removeTwitterConnect();
+    }
+    const onLogoutClick = async () => {
+
+
+      // set the signed in user to null no matter which signout is happening
+      //localStorage.clear();
+      //TODO: Remove all localstorage states
+      await removeEntireLocalState();
+
+      if (signedInUser == "lens") {
+        logout();
+      }
+      else if (signedInUser == "orbis") {
+        // nothing extra required
+      }
+
+      //TODO: Check that the redirection only happens if it is on the twitter url
+      const str: string = process.env.GATSBY_UI_BASE_URL!;
+      const url = str.endsWith('/') ? str.slice(0, -1) : str;
+      window.location.assign(url);
+    }
+
     return (
       <div >
-        {wallet && !loading && (
+        {((signedInUser == "lens") || (signedInUser == "orbis")) && (
           <div>
-            <Button onClick={logout}>
+            <Button onClick={onLogoutClick}>
               Sign out
             </Button>
             </div>
         )}
+
       </div>
     );
   }
@@ -82,26 +110,22 @@ export const Header = ({
   handleToggleClick(): void;
 }) => {
   const { data: wallet, loading } = useActiveProfile();
-  const {
-    execute: updateDispatcher,
-    error: errorDispatcher,
-    isPending: isPendingDispatcher,
-  } = useUpdateDispatcherConfig({ profile: wallet! });
-  
-  const lensHandle = wallet?.handle.split(".");
-  const handle = lensHandle ? lensHandle[0] : "";
+  const [signedInUser, setSignedInUser] = useLocalStorageState('signedInUser', {defaultValue: ""});
+  const [did, setDid] = useLocalStorageState('did', {defaultValue: ""});
 
-  const setDispatcher = async () => {
-    //TODO: Add dispatcher here
-    await updateDispatcher({ enabled: true });
+  let profile = "";
+  let handle = "";
+  if (signedInUser == "lens") {
+    const lensHandle = wallet?.handle.split(".");
+    handle = lensHandle ? lensHandle[0] : "";
+    if (lensHandle)
+    {
+      profile = process.env.GATSBY_LENSTER_URL+"/u/"+lensHandle![0];
+    }
   }
-  let lensProfile = "";
-  if (lensHandle)
-  {
-    lensProfile = process.env.GASTBY_LENSTER_URL+"/u/"+lensHandle![0];
-    /*if (wallet && !loading && !wallet.dispatcher)
-      setDispatcher();*/
-    
+  else if (signedInUser == "orbis") {
+    profile = process.env.GATSBY_ORBIS_URL+"/profile/"+did;
+    handle = did;
   }
   const theme = useTheme();  
   return (
@@ -111,7 +135,7 @@ export const Header = ({
         <Title>Plurality</Title>
       </LogoWrapper>
       <RightContainer>
-        <a href={lensProfile}><b> {handle} </b></a>
+        <a href={profile}><b> {handle} </b></a>
         &nbsp;
         &nbsp;
         <Toggle

@@ -39,8 +39,10 @@ import { Authentication } from '../components/Authentication';
 import { ModalBoxInterests } from '../components/InterestsListModal';
 import { translateInterests } from '../utils/interests';
 import { ShareModal } from '../components/ShareModal';
-import useWindowSize from 'react-use/lib/useWindowSize'
-import Confetti from 'react-confetti'
+import useWindowSize from 'react-use/lib/useWindowSize';
+import Confetti from 'react-confetti';
+import { Orbis } from "@orbisclub/orbis-sdk";
+import useLocalStorageState from 'use-local-storage-state';
 
 const Container = styled.div`
   display: flex;
@@ -164,8 +166,9 @@ const Index = () => {
 
 
   // facebook and twitter info
-  const [isFacebookConnected, setFacebookConnected] = useState(false);
-  const [isTwitterConnected, setTwitterConnected] = useState(false);
+  const [isFacebookConnected, setFacebookConnected] = useLocalStorageState('isFacebookConnected', {defaultValue: false});
+  const [isTwitterConnected, setTwitterConnected] = useLocalStorageState('isTwitterConnected', {defaultValue: false});
+
   const [isTwitterUseEffectCalled, setTwitterUseEffectCalled] = useState(false);
 
   // check connected network hook
@@ -180,8 +183,6 @@ const Index = () => {
   // share modal hook
   const [share, setShare] = useState(false);
 
-
-  const [hidden, isHidden] = useState(true);  
   const [userInformation, setUserInformation] = useState("");
 
   // metamask hooks
@@ -190,6 +191,30 @@ const Index = () => {
     ? state.isFlask
     : state.snapsDetected;
 
+  // orbis hooks
+  const [orbisUser, setOrbisUser] = useState();
+  const [orbis, setOrbis] = useState(new Orbis({}));
+
+  // local storage states (signed in user & did of user in case of orbis)
+  const [signedInUser, setSignedInUser] = useLocalStorageState('signedInUser', {defaultValue: ""});
+  const [did, setDid] = useLocalStorageState('did', {defaultValue: ""});
+  const [rejectDouble, setRejectDouble] = useLocalStorageState('rejectDouble', {defaultValue: ""});
+  
+  /** Calls the Orbis SDK and handles the results */
+  async function orbisConnect() {
+      const res = await orbis.connect_v2({ chain: "ethereum", lit: false });
+      console.log(orbis);
+    /** Check if the connection is successful or not */
+    if(res.status == 200) {
+      console.log(res.did);
+      setOrbisUser(res.did);
+      setSignedInUser("orbis");
+      setDid(res.did);
+    } else {
+      console.log("Error connecting to Ceramic: ", res);
+      alert("Error connecting to Ceramic.");
+    }
+  }
     
   const delay = ms => new Promise(
     resolve => setTimeout(resolve, ms)
@@ -198,10 +223,16 @@ const Index = () => {
   const handleClose = async () => {
     if (interestsUpdated) {
       showLoading();
-      await addInterests();
+      if (wallet) {
+        await addInterestsToLens();
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 Lens profile successfully personalized 🎉" });
+      }
+      else if (orbisUser || (signedInUser == "orbis")) {
+        await addInterestsToOrbis();
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 Orbis profile successfully personalized 🎉" });
+      }
       setShow(false);
       hideLoading();
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 Lens profile succesfully personalized 🎉" });
       setLensProfileSuccess(true);
       await delay(5000);
       setLensProfileSuccess(false);
@@ -229,9 +260,16 @@ const Index = () => {
   }
   const onShareClose = () => {
     setShare(false);
+
     //alert("Taking you to your lens profile");
-    const lensHandle = wallet?.handle.split(".");
-    window.open(`${process.env.GASTBY_LENSTER_URL}/u/${lensHandle![0]}`,"_blank");
+    if (signedInUser == "lens") {
+      const lensHandle = wallet?.handle.split(".");
+      window.open(`${process.env.GATSBY_LENSTER_URL}/u/${lensHandle![0]}`,"_blank");
+    }
+    else if (signedInUser == "orbis") {
+      window.open(`${process.env.GATSBY_ORBIS_URL}/profile/${did}`,"_blank");
+
+    }
   }
   async function uploadJson(data: unknown){
     try {
@@ -251,7 +289,8 @@ const Index = () => {
       console.log({ err })
     }
   }
-  async function updateProfile(){
+  async function updateLensProfile(){
+    //TODO: Update this to update the bio properly
     try {
       console.log("updating profile");
       const params = new URLSearchParams(window.location.search)
@@ -272,37 +311,62 @@ const Index = () => {
       hideLoading();
     }
   }
-
-  async function createPost(zkproof: string, platform: string, username: string) {
-
-    const postContent = "Gm folks! \n"+
-                        "I just connected my " + platform + " with username "+ username + " \n" +
-                        "View my zk proof verification on etherscan: " + zkproof +" \n" + 
-                        userInformation +
-                        "Let's make social media sovereign!"; 
+  async function updateOrbisProfile() {
     try {
-      //alert("Posting with: "+ userInformation);
+    const res = await orbis.updateProfile({options: {username:"testuser"}});
+    console.log(res);
 
-      if ( wallet == null || undefined)
-        alert("Wallet is null");
-      //showLoading();
-      console.log(userInformation);
-      const result = await create({
-        content: postContent,
-        contentFocus: ContentFocus.TEXT_ONLY,
-        locale: 'en',
-      })
-      return result.toString();
     }
-    catch(err) {
-      console.log(""+ err);
-      hideLoading();
-      alert(`Could not create profile due to: ${err}`);
+    catch (err) {
+      console.log(err);
     }
+  }
+
+  async function createLensPost(zkproof: string, platform: string, username: string) {
+
+      const postContent = "Gm folks! \n"+
+                          "I just connected my " + platform + " with username "+ username + " \n" +
+                          "View my zk proof verification on etherscan: " + zkproof +" \n" + 
+                          userInformation +
+                          "Let's make social media sovereign!"; 
+      try {
+        //alert("Posting with: "+ userInformation);
+
+        if ( wallet == null || undefined)
+          alert("Wallet is null");
+        //showLoading();
+        console.log(userInformation);
+        const result = await create({
+          content: postContent,
+          contentFocus: ContentFocus.TEXT_ONLY,
+          locale: 'en',
+        })
+        return result.toString();
+      }
+      catch(err) {
+        console.log(""+ err);
+        hideLoading();
+        alert(`Could not create profile due to: ${err}`);
+      }
+    
     hideLoading();
   }
 
-  async function addInterests() {
+  async function createOrbisPost(zkproof: string, platform: string, username: string) {
+    const postContent = "Gm folks! \n"+
+    "I just connected my " + platform + " with username "+ username + " \n" +
+    "View my zk proof verification on etherscan: " + zkproof +" \n" + 
+    userInformation +
+    "Let's make social media sovereign!";
+    /** Add the results in a media array used when sharing the post (the media object must be an array) */
+    const res = await orbis.createPost({
+      body: postContent,
+    });
+    console.log(res);
+    hideLoading();
+  }
+
+  async function addInterestsToLens() {
 
     console.log("In add interests");
     const lensClient = new LensClient({
@@ -359,6 +423,12 @@ const Index = () => {
     }
     
   }
+
+  async function addInterestsToOrbis() {
+    // TODO : To be implemented
+    const res = await orbis.updateProfile({data: {interests:userInterests}});
+  }
+
   const { connectAsync } = useConnect({
     connector: new InjectedConnector(),
   });
@@ -370,72 +440,119 @@ const Index = () => {
     await getTwitterID();
   };
 
-
-
-  const portProfileToLens = async (profileType:string, username: string) => {
-
+  const portProfileToWeb3 = async (profileType:string, username: string) => {
     try {
-      //console.log(`Connecting ${profileType} with lens`);
-      //console.log("Chain name is: "+ chain!.name);
-      //if (chain!.name !== "Polygon Mumbai") {
-      //  dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
-      //  return;
-      //}
+      let groupId; 
+      if (profileType == process.env.GATSBY_FACEBOOK)
+        groupId = process.env.GATSBY_FACEBOOK_GROUP_ID!;
+      else if (profileType == process.env.GATSBY_TWITTER)
+        groupId = process.env.GATSBY_TWITTER_GROUP_ID!;
 
-    let groupId; 
-    if (profileType == process.env.GATSBY_FACEBOOK)
-      groupId = process.env.GATSBY_FACEBOOK_GROUP_ID!;
-    else if (profileType == process.env.GATSBY_TWITTER)
-      groupId = process.env.GATSBY_TWITTER_GROUP_ID!;
+      if (wallet || (signedInUser == "lens")) {
 
+        console.log(`Connecting ${profileType} with lens`);
+        console.log("Chain name is: "+ chain!.name);
+        if (chain!.name !== "Polygon Mumbai") {
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
+        return -1;
+        }
 
-    // get commitment
-    showLoading();
+        // get commitment
+        showLoading();
 
-    dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Posting user's commitment on chain" });
-    const res =  await getCommitment(profileType, groupId);
-    
-    if (!res) {
-      hideLoading();
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User rejected the authentication request." });
-    }
-    else {
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Posting user's commitment on chain" });
+        const res =  await getCommitment(profileType, groupId);
         
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User's authentication commitment is now on chain" });
-      //hideLoading();
+        if (!res) {
+          hideLoading();
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User rejected the authentication request." });
+          return -1;
+        }
+        else {
+          
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User's authentication commitment is now on chain" });
 
-      // get zk
-      //showLoading();
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Verifying zk proof on chain..." });
-      const result = await getZkProof(profileType, groupId);
-      //hideLoading();
+          // get zk
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Verifying zk proof on chain..." });
+          const result = await getZkProof(profileType, groupId);
 
-      if (result !== "") {
-        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation ownership proved" });
-      }
-      else
-        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation invalid" });
+          if (result !== "") {
+            dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation ownership proved" });
+          }
+          else
+            dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation invalid" });
 
-      // port to lens
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Creating verification post on lens" });
-      await createPost(result, profileType, username);
+          // port to lens
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Creating verification post on lens" });
+          await createLensPost(result, profileType, username);
 
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Updating lens profile to match your web2 profile data" });
-      await updateProfile();
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Profile updated" });
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Updating lens profile to match your web2 profile data" });
+          await updateLensProfile();
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Profile updated" });
+                
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Personalizing lens profile by adding your interests" });
+          handleShow();
+          hideLoading();
+          }
+        }
+      else if (orbisUser || (signedInUser == "orbis")) {
+        if (!orbisUser) await orbisConnect();
+        console.log(`Connecting ${profileType} with orbis`);
+        console.log("Chain name is: "+ chain!.name);
+        if (chain!.name !== "Ethereum") {
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Ethereum Mainnet \nhttps://chainlist.org/chain/1" });
+          //throw new Error("Incorrect network"); 
+          return -1; 
+        }
+  
+        // get commitment
+        showLoading();
+  
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Posting user's commitment on chain" });
+        const res =  await getCommitment(profileType, groupId);
+        
+        if (!res) {
+          hideLoading();
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User rejected the authentication request." });
+          return -1;
+        }
+        else {
             
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Personalizing lens profile by adding your interests" });
-      handleShow();
-      hideLoading();
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User's authentication commitment is now on chain" });
+  
+          // get zk
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Verifying zk proof on chain..." });
+          const result = await getZkProof(profileType, groupId);
+  
+          if (result !== "") {
+            dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation ownership proved" });
+          }
+          else
+            dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Reputation invalid" });
+  
+          // port to orbis
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Creating verification post on orbis" });
+          await createOrbisPost(result, profileType, username);
+  
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Updating orbis profile to match your web2 profile data" });
+          await updateOrbisProfile();
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Profile updated" });
+                
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Personalizing orbis profile by adding your interests" });
+          handleShow();
+          hideLoading();
+
+        }
       }
     }
     catch (err)
     {
       console.log(err);
       hideLoading();
-      alert("Error in updating: "+ err);
+      setRejectDouble("");
     }
     hideLoading();
+    setRejectDouble("");
   };
 
 
@@ -463,21 +580,31 @@ const Index = () => {
     const platform = params.get('id_platform')!;
 
     const twitter = async () => {
-     const interests = getTwitterInterestsForLens(username);
-     setUserInterests(interests);
-     setUserInterestsLabels(translateInterests(interests));
-     //setUserInformation(getTwitterInformationForLens(username));
-     setTwitterUseEffectCalled(true);
-     await portProfileToLens(platform, username);
-     setTwitterConnected(true);
+      if (!isTwitterUseEffectCalled) {
+        setTwitterUseEffectCalled(true);
+        const interests = getTwitterInterestsForLens(username);
+        setUserInterests(interests);
+        setUserInterestsLabels(translateInterests(interests));
+        //setUserInformation(getTwitterInformationForLens(username));
+        const res = await portProfileToWeb3(platform, username);
+        if (res != -1)
+          setTwitterConnected(true);
+      }
    }
 
-    if (wallet && username!=null && platform == process.env.GATSBY_TWITTER && !isTwitterConnected && !isTwitterUseEffectCalled) {
-       twitter().catch(console.error);
+    if ((signedInUser == "lens") && !wallet)  {
+      return;
+    }
+
+    if ( signedInUser && ((rejectDouble == "") || (rejectDouble == null)) && username!=null && platform == process.env.GATSBY_TWITTER && !isTwitterConnected && !isTwitterUseEffectCalled) {      
+      setRejectDouble("true");
+      twitter().catch(console.error);
+      setRejectDouble("true");
     }
   }, [wallet])
 
   useEffect(() => {
+
     // use effect for facebook
     (window as any).fbAsyncInit = function() {
       (window as any).FB.init({
@@ -554,11 +681,25 @@ const Index = () => {
     //setUserInformation(getFacebookInformationForLens(response));
     if (wallet && !wallet.dispatcher)
       await updateDispatcher({ enabled: true });
-    await portProfileToLens(process.env.GATSBY_FACEBOOK!, response.name);
-    setFacebookConnected(true);
+
+    try {
+      const res = await portProfileToWeb3(process.env.GATSBY_FACEBOOK!, response.name);
+      if (res != -1)
+        setFacebookConnected(true);
+    }
+    catch (err) {
+      alert("err");
+      console.log(err);
+    }
     hideLoading();
   };
 
+  let handle = "";
+  if (signedInUser == "lens")
+    handle = `${process.env.GATSBY_LENSTER_URL}/u/${wallet?.handle.split(".")[0]}`;
+  else if (signedInUser == "orbis") {
+    handle = `${process.env.GATSBY_ORBIS_URL}/profile/${did}`;
+  }
   return (
     <Container>
       
@@ -580,13 +721,12 @@ const Index = () => {
         )}
       
       <ModalBoxInterests show={show} handleClose={handleClose} onChange={handleChangeInterests} userInterests={userInterestsLabels}/>
-      <ShareModal share={share} handle={`${process.env.GASTBY_LENSTER_URL}/u/${wallet?.handle.split(".")[0]}`} handleClose={onShareClose}></ShareModal>
+      <ShareModal share={share} handle={handle} handleClose={onShareClose}></ShareModal>
       {lensProfileSuccess && (
         <Confetti tweenDuration= { 2000 } width={width} height={height} />
       )}
       
       <CardContainer style={{ justifyContent: Boolean(state.installedSnap) ? "center": "flex-start" }}>
-
 
         {state.error && (
           <ErrorMessage>
@@ -625,7 +765,7 @@ const Index = () => {
         )}
 
       {/* Workflow Step 1: Sign in to lens */}
-      {!wallet && isMetaMaskReady && (
+      {!wallet && isMetaMaskReady && !orbisUser && (
           <Card
           content={{
             title: 'Lens',
@@ -641,7 +781,7 @@ const Index = () => {
         )}
 
       {/* Workflow Step 1: Sign in to orbis */}
-      {!wallet && isMetaMaskReady &&(
+      {!wallet && isMetaMaskReady && !orbisUser && (
           <Card
           content={{
             title: 'Orbis',
@@ -649,17 +789,17 @@ const Index = () => {
               'Onboard to web3 social Orbis',
             button: (
               <Button
-                disabled={ true}
-                //onClick={onAfterOAuthLoginClick}
+              disabled={!state.installedSnap || !isMetaMaskReady}
+              onClick={orbisConnect}
               >  Sign in
               </Button>
             ),
           }}
-          disabled={true}
+          disabled={!state.installedSnap || !isMetaMaskReady}
         />
         )}
         {/* Workflow Step 1: Sign in to farcaster */}
-        {!wallet && isMetaMaskReady && (
+        {!wallet && isMetaMaskReady && !orbisUser && (
           <Card
           content={{
             title: 'Farcaster',
@@ -678,7 +818,7 @@ const Index = () => {
         )}
 
       {/* Workflow Step 2: Connect twitter */}
-        {wallet && (
+        {(wallet || orbisUser) && (
           <Card
           content={{
             title: 'Twitter (X)',
@@ -699,7 +839,7 @@ const Index = () => {
         )}
       
       {/* Workflow Step 2: Connect Facebook */}
-        {wallet && (
+        {(wallet || orbisUser) && (
           <Card
           content={{
             title: 'Facebook',
@@ -724,7 +864,7 @@ const Index = () => {
         )}
 
         {/* Workflow Step 2: Connect TikTok */}
-        {wallet && (
+        {(wallet || orbisUser) && (
           <Card
           content={{
             title: 'TikTok',
@@ -738,7 +878,7 @@ const Index = () => {
               </Button>
             ),
           }}
-          disabled={!state.installedSnap || !isMetaMaskReady}
+          disabled={true}
         />
 
         )}

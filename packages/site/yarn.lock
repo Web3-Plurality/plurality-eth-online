@@ -21894,6 +21894,7 @@ __metadata:
     styled-components: 5.3.3
     typescript: ^4.7.4
     url: ^0.11.3
+    use-local-storage-state: ^19.1.0
     util: ^0.12.5
     viem: ^1.10.14
     wagmi: ^1.4.2
@@ -23907,6 +23908,16 @@ __metadata:
     "@types/react":
       optional: true
   checksum: a6532f7fc9ae222c3725ff0308aaf1f1ddbd3c00d685ef9eee6714fd0684de5cb9741b432fbf51e61a784e2955424864f7ea9f99734a02f237b17ad3e18ea5cb
+  languageName: node
+  linkType: hard
+
+"use-local-storage-state@npm:^19.1.0":
+  version: 19.1.0
+  resolution: "use-local-storage-state@npm:19.1.0"
+  peerDependencies:
+    react: ">=18"
+    react-dom: ">=18"
+  checksum: c8c65e000cdd96f6ddbae9361aba464a15943e1c928d49c166a84b8fa7ef9ef578f7b9e37f3be8bc440edee3ccb803af2f0c4db666c056159ff9f597fbfba796
   languageName: node
   linkType: hard
 

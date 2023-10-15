@@ -6,6 +6,7 @@ import { useNetwork } from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from 'react-bootstrap';
 import { MetaMaskContext, MetamaskActions } from '../hooks/MetamaskContext';
+import useLocalStorageState from 'use-local-storage-state';
 
 
 export function Authentication() {
@@ -15,16 +16,9 @@ export function Authentication() {
     const { isConnected } = useAccount();
     const { disconnectAsync } = useDisconnect();
     const { execute, isPending } = useCreateProfile();  
-    const [registerProfile, isRegisterProfile] = useState(false);
     const { showLoading, hideLoading } = useContext(LoadingContext);
     const [state, dispatch] = useContext(MetaMaskContext);
-
-    const { chain, chains } = useNetwork();
-    const {
-      execute: updateDispatcher,
-      error: errorDispatcher,
-      isPending: isPendingDispatcher,
-    } = useUpdateDispatcherConfig({ profile: wallet! });
+    const [signedInUser, setSignedInUser] = useLocalStorageState('signedInUser', {defaultValue: ""});
   
     async function createLensProfile (handle:string): Promise<string>  {
       try {
@@ -60,12 +54,6 @@ export function Authentication() {
     });
   
     const onLoginClick = async () => {
-
-
-     // if (chain!.name !== "Polygon Mumbai") {
-     //   dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
-     //   return;
-     // }
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Signing in your lens profile" });
       showLoading();
       if (isConnected) {
@@ -98,6 +86,8 @@ export function Authentication() {
             }
           }
           dispatch({ type: MetamaskActions.SetInfoMessage, payload: "" });
+          setSignedInUser("lens");
+
         } else {
           alert(result.error.message);
           hideLoading();

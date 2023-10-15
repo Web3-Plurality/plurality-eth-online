@@ -71,7 +71,7 @@ export const sendHello = async () => {
 };
 
 /**
- * Invoke the "commitment_request" & "commitment_request" method from the example snap.
+ * Invoke the "commitment_request" method from the example snap.
  */
 
 export const getCommitment = async (profileType: string, groupId: string): Promise<boolean> => {
