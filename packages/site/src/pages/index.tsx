@@ -201,16 +201,23 @@ const Index = () => {
   
   /** Calls the Orbis SDK and handles the results */
   async function orbisConnect() {
-      const res = await orbis.connect_v2({ chain: "ethereum", lit: false });
-      console.log(orbis);
+    dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Signing in your orbis profile" });
+    showLoading();
+    const res = await orbis.connect_v2({ chain: "ethereum", lit: false });
+    console.log(orbis);
     /** Check if the connection is successful or not */
     if(res.status == 200) {
       console.log(res.did);
       setOrbisUser(res.did);
       setSignedInUser("orbis");
       setDid(res.did);
+      hideLoading();
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "" });
+
     } else {
       console.log("Error connecting to Ceramic: ", res);
+      hideLoading();
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User rejected the orbis sign in request" });
       //alert("Error connecting to Ceramic.");
     }
   }
@@ -222,8 +229,9 @@ const Index = () => {
   const handleClose = async () => {
     showLoading();
     if (wallet) {
-      await addInterestsToLens();
-      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 Lens profile successfully personalized 🎉" });
+      const res = await addInterestsToLens();
+      if (res!= -1)
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 Lens profile successfully personalized 🎉" });
     }
     else if (orbisUser || (signedInUser == "orbis")) {
       await addInterestsToOrbis();
@@ -449,7 +457,15 @@ const Index = () => {
       const address = wallet.address;
       const challenge = await lensClient.authentication.generateChallenge(address);
       console.log(challenge);
-      const signature = await walletClient.signMessage({account: address,message: challenge});
+      let signature;
+      try {
+        signature = await walletClient.signMessage({account: address,message: challenge});
+      }
+      catch (err) {
+        alert(err);
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 User linked the profile without interests 🎉" });
+        return -1;
+      }
       await lensClient.authentication.authenticate(address, signature);
       console.log ("is client authenticated? " + await lensClient.authentication.isAuthenticated());
         // check the state with
@@ -517,10 +533,14 @@ const Index = () => {
       return -1;
       }
     }
-
+    else if (orbisUser || (signedInUser == "orbis")) {
+      console.log("Chain name is: "+ chain!.name);
+      if (chain!.name !== "Ethereum") {
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Ethereum Mainnet \nhttps://chainlist.org/chain/1" });
+        return -1; 
+      }
+    }
     // get twitter
-    if (wallet && !wallet.dispatcher)
-      await updateDispatcher({ enabled: true });
     await getTwitterID();
   };
 
@@ -543,6 +563,12 @@ const Index = () => {
 
         // get commitment
         showLoading();
+
+        if (wallet && !wallet.dispatcher) {
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Connecting to lens protocol" });
+          const res = await updateDispatcher({ enabled: true });
+          console.log(res);
+        }
 
         dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Posting user's commitment on chain" });
         const res =  await getCommitment(profileType, groupId);
@@ -581,9 +607,7 @@ const Index = () => {
         }
       else if (orbisUser || (signedInUser == "orbis")) {
         if (!orbisUser) {
-          showLoading();
           await orbisConnect();
-          hideLoading();
         }
         console.log(`Connecting ${profileType} with orbis`);
         console.log("Chain name is: "+ chain!.name);
@@ -635,6 +659,7 @@ const Index = () => {
     }
     catch (err)
     {
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "An error occurred. Please try again" });
       console.log(err);
       hideLoading();
     }
@@ -679,7 +704,7 @@ const Index = () => {
     if (signedInUser == "orbis") {
       return;
     }
-
+    if (wallet == undefined)  return;
     if ((signedInUser == "lens") && !wallet)  {
       return;
     }
@@ -699,83 +724,20 @@ const Index = () => {
     }
   }, [])
 
-  useEffect(() => {
-
-    // use effect for facebook
-    (window as any).fbAsyncInit = function() {
-      (window as any).FB.init({
-        appId            : '696970245672784',
-        autoLogAppEvents : true,
-        xfbml            : true,
-        version          : 'v18.0'
-      });
-
-      (window as any).FB.AppEvents.logPageView();   
-
-
-      (window as any).FB.getLoginStatus(function(response) {   // Called after the JS SDK has been initialized.
-        statusChangeCallback(response);        // Returns the login status.
-      });
-        
-    };
-
-    (function(d, s, id) {
-      let js, fjs: any = d.getElementsByTagName(s)[0];
-      if (d.getElementById(id)) return;
-      js = d.createElement(s); js.id = id;
-      js.src = "https://connect.facebook.net/en_US/sdk.js";
-      fjs.parentNode.insertBefore(js, fjs);
-    }(document, 'script', 'facebook-jssdk'));  
-  }, [])
-
-
-    function statusChangeCallback(response) {  // Called with the results from FB.getLoginStatus().
-      console.log('statusChangeCallback');
-      console.log(response);                   // The current login status of the person.
-      if (response.status === 'connected') {   // Logged into your webpage and Facebook.
-        testAPI();  
-      } else {                                 // Not logged into your webpage or we are unable to tell.
-        console.log('Please log ' +
-          'into this webpage.');
-      }
-    }
-
-    function testAPI() {                      // Testing Graph API after login.  See statusChangeCallback() for when this call is made.
-      console.log('Welcome!  Fetching your information.... ');
-      (window as any).FB.api('/me?fields=name,picture,gender,inspirational_people,languages,meeting_for,quotes,significant_other,sports, music, photos, age_range, favorite_athletes, favorite_teams, hometown, feed, likes', function(response) {
-        console.log('Successful login for: ' + response.name);
-        
-        //setUserInterests(getFacebookInterestsForLens(response));
-        const interests = getFacebookInterestsForLens(response);
-        setUserInterests(interests);
-        setUserInterestsLabels(translateInterests(interests));
-        //setUserInformation(getFacebookInformationForLens(response));
-        (window as any).FB.api(
-          `/${response.id}`,
-          function (response) {
-            console.log(response);
-            if (response && !response.error) {
-              /* handle the result */
-              console.log("Result from me: ");
-              console.log(response);
-              //setFacebookConnected(true);
-            }
-          }
-      );
-      });
-    }
-
   const responseFacebook = async (response) => {
     console.log(response);
     const accessToken = response.accessToken;
     console.log("Access token is: "+accessToken);
+    if (!accessToken)
+    {
+      dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User didn't complete facebook login" });
+      return;
+    }
 
     const interests = getFacebookInterestsForLens(response);
      setUserInterests(interests);
      setUserInterestsLabels(translateInterests(interests));
     //setUserInformation(getFacebookInformationForLens(response));
-    if (wallet && !wallet.dispatcher)
-      await updateDispatcher({ enabled: true });
 
     try {
       const res = await portProfileToWeb3(process.env.GATSBY_FACEBOOK!, response.name);
@@ -801,7 +763,7 @@ const Index = () => {
         Join web3 social using <Span>Plurality</Span>
       </Heading>
       <Subtitle>
-      Connect your web2 socials and bring your reputation with you! 
+      Personalize your web3 experience by linking your interests and reputation! 
       </Subtitle>
         {/*{!hidden && (
           <Message>

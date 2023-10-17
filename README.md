@@ -7,10 +7,10 @@
     </h1>
 </p>
 
-| Plurality enables sovereignty over your social reputation by creating an on-ramp of your web2 digital footprint into web3 using verifiable zk-proofs that preserve your privacy. |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plurality is a web3 onboarding protocol that enables the social media users and content creators to migrate to blockchain based web3 social networks by linking, verifying and aggregating their existing social reputation and interests. |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 
-By bringing reputation on chain, plurality simplifies onboarding into web3 and enables fun and exciting use cases by reflecting the humanness of the people behind the wallets.
+By bringing reputation and interests on chain, plurality simplifies onboarding into web3 and enables fun and exciting use cases by reflecting the humanness of the people behind the wallets.
 
 # Live demo
 
@@ -60,8 +60,11 @@ We achieved following during the hackathon:
 
 1. Finalization of the concept and consolidation of ideas for the pitch
 2. Website development with web2 to web3 onboarding workflows
-3. Integration with Lens protocol
-4. Integration with Twitter
-5. Deployment pipeline to ship the package/containers
-6. We deployed the website to public VM with SSL encryption. It can be accessed at: https://plurality.westeurope.cloudapp.azure.com/
-7. We published our Metamask Snap to npm package registry so it could be downloaded by everyone to run this demo. Here is the link: https://www.npmjs.com/package/web3-plurality
+3. Web3 Integration with Lens protocol
+4. Web3 Integration with Orbis protocol
+5. OAuth Integration with Twitter
+6. OAuth Integration with Facebook
+7. Integration with Facebook Graph API to capture interests
+8. Deployment pipeline to ship the package/containers
+9. We deployed the website to public VM with SSL encryption. It can be accessed at: https://plurality.westeurope.cloudapp.azure.com/
+10. We published our Metamask Snap to npm package registry so it could be downloaded by everyone to run this demo. Here is the link: https://www.npmjs.com/package/web3-plurality
