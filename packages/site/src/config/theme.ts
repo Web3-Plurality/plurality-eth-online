@@ -60,7 +60,7 @@ export const light: DefaultTheme = {
     },
     primary: {
   //  default: '#6F4CFF',
-      default: '#cc338b',
+      default: '#AF1B6D',
       inverse: '#FFFFFF',
     },
     card: {
@@ -99,8 +99,8 @@ export const dark: DefaultTheme = {
       default: '#848C96',
     },
     primary: {
-    //  default: '#6F4CFF',
-      default: '#cc338b',
+  //  default: '#6F4CFF',
+      default: '#AF1B6D',
       inverse: '#FFFFFF',
     
     },

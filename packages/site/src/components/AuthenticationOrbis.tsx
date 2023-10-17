@@ -44,7 +44,7 @@ export function AuthenticationOrbis() {
           <Button
             onClick={orbisConnect}
           >
-            Sign in
+            Connect
           </Button>
           
         )}

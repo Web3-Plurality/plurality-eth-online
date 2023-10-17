@@ -49,7 +49,7 @@ export function ShareModal( props: any ) {
               {/* <input type="text" disabled={ true } placeholder={ props.handle } style={{textAlign:'center', overflow:'hidden', width:'60%'}}/> */}
               <textarea name="msgToShare" id="msgToShare" cols={30} rows={10} placeholder={ message } style={{resize: 'none'}} disabled></textarea>
               <CopyToClipboard text={ message } style={{width: '30%', margin: 'auto', marginTop: '15px', marginBottom: '10px'}}>
-                <Button>Copy</Button>
+                <Button style={{marginTop: '3px'}}>Copy</Button>
               </CopyToClipboard>
             </div>
 

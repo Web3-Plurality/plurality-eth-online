@@ -91,11 +91,13 @@ export function Authentication() {
         } else {
           alert(result.error.message);
           hideLoading();
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User rejected the authentication request" });
         }
         }
         catch (err) {
           alert(err);
           hideLoading();
+          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Error in authentication" });
         }
       }
       hideLoading();
@@ -112,7 +114,7 @@ export function Authentication() {
             disabled={isLoginPending}
             onClick={onLoginClick}
           >
-            Sign in
+            Connect
           </Button>
           
         )}

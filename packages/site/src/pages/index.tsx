@@ -198,7 +198,6 @@ const Index = () => {
   // local storage states (signed in user & did of user in case of orbis)
   const [signedInUser, setSignedInUser] = useLocalStorageState('signedInUser', {defaultValue: ""});
   const [did, setDid] = useLocalStorageState('did', {defaultValue: ""});
-  const [rejectDouble, setRejectDouble] = useLocalStorageState('rejectDouble', {defaultValue: ""});
   
   /** Calls the Orbis SDK and handles the results */
   async function orbisConnect() {
@@ -212,7 +211,7 @@ const Index = () => {
       setDid(res.did);
     } else {
       console.log("Error connecting to Ceramic: ", res);
-      alert("Error connecting to Ceramic.");
+      //alert("Error connecting to Ceramic.");
     }
   }
     
@@ -261,7 +260,6 @@ const Index = () => {
   const onShareClose = () => {
     setShare(false);
 
-    //alert("Taking you to your lens profile");
     if (signedInUser == "lens") {
       const lensHandle = wallet?.handle.split(".");
       window.open(`${process.env.GATSBY_LENSTER_URL}/u/${lensHandle![0]}`,"_blank");
@@ -289,21 +287,61 @@ const Index = () => {
       console.log({ err })
     }
   }
-  async function updateLensProfile(){
-    //TODO: Update this to update the bio properly
+  async function updateLensProfile(zkproof: string, platform: string, username: string){
     try {
       console.log("updating profile");
-      const params = new URLSearchParams(window.location.search)
-      const username = params.get('username')!;
+      const existingBio = wallet?.bio;
+      let updatedBio = "";
+      let updatedAttributes = {};
+      if (existingBio == "" || existingBio == null) {
+        updatedBio = `GM frens. My verified ${platform} proof: ${zkproof}. `;
 
+        if (platform == process.env.GATSBY_TWITTER) {
+          updatedAttributes = {
+            location: "earth",
+            website: "",
+            x: "https://x.com/"+username,
+          }
+        }
+
+        else if (platform == process.env.GATSBY_FACEBOOK) {
+          updatedAttributes = {
+            location: "earth",
+            website: "www.facebook.com/"+username,
+            x: ""
+          }
+        }
+      }
+
+      else {
+
+        // check if both facebook and twitter have already been updated. return in that case.
+
+        if (platform == process.env.GATSBY_TWITTER) {
+          if (existingBio!.includes(`${process.env.GATSBY_TWITTER}`)) {
+            console.log("Twitter is already verified. Returning");
+            return -1;
+          }
+          // only update the extra verification that has been added
+          updatedAttributes = {
+            x: "https://x.com/"+username  
+          }
+        }
+        else if (platform == process.env.GATSBY_FACEBOOK) {
+          if (existingBio!.includes(`${process.env.GATSBY_FACEBOOK}`)) {
+            console.log("Facebook is already verified. Returning");
+            return -1;
+          }
+          // only update the extra verification that has been added
+          updatedAttributes = {
+            website: "www.facebook.com/"+username,
+          }
+        }
+        updatedBio = existingBio + `My verified ${platform} proof: ${zkproof}`;
+      }
       const name = username;
-      const bio = `Hi, I'm <a href="www.google.com"/> ${username} </a>`;
-      const attributes = {
-        location: "earth",
-        website: "",
-        x: "https://x.com/"+username,
-        test: "https://google.com"
-      };
+      const bio = updatedBio;
+      const attributes = updatedAttributes;
       await update({ name, bio, attributes });
       console.log("Profile updated");      
     } catch(err) {
@@ -311,10 +349,37 @@ const Index = () => {
       hideLoading();
     }
   }
-  async function updateOrbisProfile() {
+  async function updateOrbisProfile(zkproof: string, platform: string, name: string) {
     try {
-    const res = await orbis.updateProfile({options: {username:"testuser"}});
-    console.log(res);
+      console.log("updating profile");
+      const { data, error } = await orbis.getProfile(did);
+      console.log(JSON.stringify(data));
+      const existingBio = data?.details.profile.description;
+      let updatedBio = "";
+      if (!existingBio) {
+        updatedBio = `GM frens. My verified ${platform} proof: ${zkproof}. `;
+      }
+
+      else {
+
+        // check if both facebook and twitter have already been updated. return in that case.
+        if (platform == process.env.GATSBY_TWITTER) {
+          if (existingBio!.includes(`${process.env.GATSBY_TWITTER}`)) {
+            console.log("Twitter is already verified. Returning");
+            return -1;
+          }
+        }
+        else if (platform == process.env.GATSBY_FACEBOOK) {
+          if (existingBio!.includes(`${process.env.GATSBY_FACEBOOK}`)) {
+            console.log("Facebook is already verified. Returning");
+            return -1;
+          }
+        }
+        updatedBio = existingBio + `My verified ${platform} proof: ${zkproof} `;
+      }
+
+      const res = await orbis.updateProfile({username:name, description: updatedBio});
+      console.log(res);
 
     }
     catch (err) {
@@ -330,10 +395,7 @@ const Index = () => {
                           userInformation +
                           "Let's make social media sovereign!"; 
       try {
-        //alert("Posting with: "+ userInformation);
-
         if ( wallet == null || undefined)
-          alert("Wallet is null");
         //showLoading();
         console.log(userInformation);
         const result = await create({
@@ -425,8 +487,16 @@ const Index = () => {
   }
 
   async function addInterestsToOrbis() {
-    // TODO : To be implemented
-    const res = await orbis.updateProfile({data: {interests:userInterests}});
+    try {
+      const { data, error } = await orbis.getProfile(did);
+      console.log(JSON.stringify(data));
+      const name = data.details.profile.username;
+      const updatedBio = data.details.profile.description;
+      const res = await orbis.updateProfile({username:name, description: updatedBio, data: {interests:userInterests}});
+    }
+    catch (error) {
+      console.log(error);
+    }
   }
 
   const { connectAsync } = useConnect({
@@ -434,6 +504,11 @@ const Index = () => {
   });
 
   const loginTwitter = async () => {
+    if (isTwitterConnected) {
+      alert("Twitter is already verified");
+      return;
+    }
+
     // get twitter
     if (wallet && !wallet.dispatcher)
       await updateDispatcher({ enabled: true });
@@ -464,9 +539,9 @@ const Index = () => {
         const res =  await getCommitment(profileType, groupId);
         
         if (!res) {
-          hideLoading();
-          dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User rejected the authentication request." });
-          return -1;
+                    hideLoading();
+                    dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User rejected the authentication request." });
+                    return -1;
         }
         else {
           
@@ -487,7 +562,7 @@ const Index = () => {
           await createLensPost(result, profileType, username);
 
           dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Updating lens profile to match your web2 profile data" });
-          await updateLensProfile();
+          await updateLensProfile(result, profileType, username);
           dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Profile updated" });
                 
           dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Personalizing lens profile by adding your interests" });
@@ -496,7 +571,11 @@ const Index = () => {
           }
         }
       else if (orbisUser || (signedInUser == "orbis")) {
-        if (!orbisUser) await orbisConnect();
+        if (!orbisUser) {
+          showLoading();
+          await orbisConnect();
+          hideLoading();
+        }
         console.log(`Connecting ${profileType} with orbis`);
         console.log("Chain name is: "+ chain!.name);
         if (chain!.name !== "Ethereum") {
@@ -535,7 +614,7 @@ const Index = () => {
           await createOrbisPost(result, profileType, username);
   
           dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Updating orbis profile to match your web2 profile data" });
-          await updateOrbisProfile();
+          await updateOrbisProfile(result, profileType, username);
           dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Profile updated" });
                 
           dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Personalizing orbis profile by adding your interests" });
@@ -549,10 +628,8 @@ const Index = () => {
     {
       console.log(err);
       hideLoading();
-      setRejectDouble("");
     }
     hideLoading();
-    setRejectDouble("");
   };
 
 
@@ -572,36 +649,46 @@ const Index = () => {
     }
   };
 
-  useEffect(() => {
-    //use effect for twitter
-    // get the proof request params for this popup
+  const twitter = async () => {
     const params = new URLSearchParams(window.location.search)
     const username = params.get('username')!;
     const platform = params.get('id_platform')!;
 
-    const twitter = async () => {
-      if (!isTwitterUseEffectCalled) {
-        setTwitterUseEffectCalled(true);
-        const interests = getTwitterInterestsForLens(username);
-        setUserInterests(interests);
-        setUserInterestsLabels(translateInterests(interests));
-        //setUserInformation(getTwitterInformationForLens(username));
-        const res = await portProfileToWeb3(platform, username);
-        if (res != -1)
-          setTwitterConnected(true);
-      }
-   }
+    if (!isTwitterUseEffectCalled && username!=null && platform == process.env.GATSBY_TWITTER) {
+      setTwitterUseEffectCalled(true);
+      const interests = getTwitterInterestsForLens(username);
+      setUserInterests(interests);
+      setUserInterestsLabels(translateInterests(interests));
+      const res = await portProfileToWeb3(platform, username);
+      if (res != -1)
+        setTwitterConnected(true);
+    }
+ }
+
+  useEffect(() => {
+    //use effect for twitter with lens
+    if (signedInUser == "orbis") {
+      return;
+    }
 
     if ((signedInUser == "lens") && !wallet)  {
       return;
     }
-
-    if ( signedInUser && ((rejectDouble == "") || (rejectDouble == null)) && username!=null && platform == process.env.GATSBY_TWITTER && !isTwitterConnected && !isTwitterUseEffectCalled) {      
-      setRejectDouble("true");
+    if ( signedInUser  && !isTwitterConnected && !isTwitterUseEffectCalled) {      
       twitter().catch(console.error);
-      setRejectDouble("true");
     }
   }, [wallet])
+
+  useEffect(() => {
+    //use effect for twitter with orbis
+    if (signedInUser == "lens") {
+      return;
+    }
+
+    if ( signedInUser && !isTwitterConnected && !isTwitterUseEffectCalled) {      
+      twitter().catch(console.error);
+    }
+  }, [])
 
   useEffect(() => {
 
@@ -648,7 +735,6 @@ const Index = () => {
       console.log('Welcome!  Fetching your information.... ');
       (window as any).FB.api('/me?fields=name,picture,gender,inspirational_people,languages,meeting_for,quotes,significant_other,sports, music, photos, age_range, favorite_athletes, favorite_teams, hometown, feed, likes', function(response) {
         console.log('Successful login for: ' + response.name);
-        //alert('Thanks for logging in, ' + response.name + '!');
         
         //setUserInterests(getFacebookInterestsForLens(response));
         const interests = getFacebookInterestsForLens(response);
@@ -688,7 +774,6 @@ const Index = () => {
         setFacebookConnected(true);
     }
     catch (err) {
-      alert("err");
       console.log(err);
     }
     hideLoading();
@@ -734,7 +819,7 @@ const Index = () => {
           </ErrorMessage>
         )}
         {/* Workflow Step 0:  Install Flask */}
-        {!isMetaMaskReady && (
+        {!signedInUser && !isMetaMaskReady && (
           <Card
             content={{
               title: 'Install',
@@ -747,7 +832,7 @@ const Index = () => {
         )}
 
         {/* Workflow Step 0: Connect MetaMask Snap */}
-        {!state.installedSnap && (
+        {!signedInUser && !state.installedSnap && (
           <Card
             content={{
               title: 'Connect',
@@ -765,7 +850,7 @@ const Index = () => {
         )}
 
       {/* Workflow Step 1: Sign in to lens */}
-      {!wallet && isMetaMaskReady && !orbisUser && (
+      {!signedInUser && isMetaMaskReady && state.installedSnap && (
           <Card
           content={{
             title: 'Lens',
@@ -781,7 +866,7 @@ const Index = () => {
         )}
 
       {/* Workflow Step 1: Sign in to orbis */}
-      {!wallet && isMetaMaskReady && !orbisUser && (
+      {!signedInUser && isMetaMaskReady && state.installedSnap && (
           <Card
           content={{
             title: 'Orbis',
@@ -791,7 +876,7 @@ const Index = () => {
               <Button
               disabled={!state.installedSnap || !isMetaMaskReady}
               onClick={orbisConnect}
-              >  Sign in
+              >  Connect
               </Button>
             ),
           }}
@@ -799,7 +884,7 @@ const Index = () => {
         />
         )}
         {/* Workflow Step 1: Sign in to farcaster */}
-        {!wallet && isMetaMaskReady && !orbisUser && (
+        {!signedInUser && isMetaMaskReady && state.installedSnap && (
           <Card
           content={{
             title: 'Farcaster',
@@ -809,7 +894,24 @@ const Index = () => {
               <Button
                 disabled={ true }
                 //onClick={onAfterOAuthLoginClick}
-              >  Sign in
+              >  Coming Soon
+              </Button>
+            ),
+          }}
+          disabled={ true }
+        />
+        )}
+        {!signedInUser && isMetaMaskReady && state.installedSnap && (
+          <Card
+          content={{
+            title: 'Friend.tech',
+            description:
+              'Onboard to web3 social Friend.tech',
+            button: (
+              <Button
+                disabled={ true }
+                //onClick={onAfterOAuthLoginClick}
+              >  Coming Soon
               </Button>
             ),
           }}
@@ -818,7 +920,7 @@ const Index = () => {
         )}
 
       {/* Workflow Step 2: Connect twitter */}
-        {(wallet || orbisUser) && (
+        {((signedInUser && isMetaMaskReady) || !state.installedSnap) && (
           <Card
           content={{
             title: 'Twitter (X)',
@@ -827,8 +929,8 @@ const Index = () => {
             button: (
               <Button
                 onClick={loginTwitter}
-                disabled={!isMetaMaskReady || !state.installedSnap}
-              > Login with X
+                disabled={!isMetaMaskReady || !state.installedSnap || isTwitterConnected}
+              > Verify Profile
               </Button>
             ),
           }}
@@ -839,7 +941,7 @@ const Index = () => {
         )}
       
       {/* Workflow Step 2: Connect Facebook */}
-        {(wallet || orbisUser) && (
+        {((signedInUser && isMetaMaskReady)|| !state.installedSnap) && (
           <Card
           content={{
             title: 'Facebook',
@@ -853,7 +955,9 @@ const Index = () => {
               callback={responseFacebook}
               scope="public_profile, email, user_hometown, user_likes, user_friends, user_gender, user_age_range"
               render={renderProps => (
-                <button onClick={renderProps.onClick}>Login with Facebook</button>
+                <button onClick={renderProps.onClick} 
+                disabled={!state.installedSnap || !isMetaMaskReady || isFacebookConnected}
+                >Verify Profile</button>
               )}
             />
             ),
@@ -864,7 +968,7 @@ const Index = () => {
         )}
 
         {/* Workflow Step 2: Connect TikTok */}
-        {(wallet || orbisUser) && (
+        {((signedInUser && isMetaMaskReady)|| !state.installedSnap) && (
           <Card
           content={{
             title: 'TikTok',
@@ -874,7 +978,7 @@ const Index = () => {
               <Button
                 //onClick={loginTwitter}
                 disabled={true}
-              >  Authenticate
+              >  Coming Soon
               </Button>
             ),
           }}
@@ -882,7 +986,7 @@ const Index = () => {
         />
 
         )}
-        {wallet && (
+        {((signedInUser && isMetaMaskReady)|| !state.installedSnap) && (
           <Card
           content={{
             title: 'Instagram',
@@ -892,7 +996,7 @@ const Index = () => {
               <Button
                 //onClick={onBeforeOAuthLoginClick}
                 disabled={true}
-              >  Authenticate
+              >  Coming Soon
               </Button>
             ),
           }}

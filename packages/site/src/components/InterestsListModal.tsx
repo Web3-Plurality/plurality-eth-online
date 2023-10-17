@@ -65,19 +65,21 @@ export function ModalBoxInterests( props: any ) {
             <Subtitle>Your interests</Subtitle>
             <p>We found the following interests. Please select if there is something else you are interested in</p>
             </div>
-            <Select
-              value={selectedValues}
-              isMulti
-              className="basic-multi-select"
-              classNamePrefix="select"
-              styles={{ menuPortal: base => ({ ...base, zIndex: 10000 }), marginLeft: '2%', marginRight: '2%' }}
-              menuPortalTarget={document.body}
-              options={lensInterests}
-              onChange={(e)=>{console.log(e); handleChange(e); props.onChange(e)}}
-            />
-            <div style={{marginLeft: '2%', marginRight: '2%', marginTop: '1%', marginBottom: '1%'}}>
+            <div style={{marginLeft: '2%', marginRight: '2%'}}>
+              <Select
+                value={selectedValues}
+                isMulti
+                className="basic-multi-select"
+                classNamePrefix="select"
+                styles={{ menuPortal: base => ({ ...base, zIndex: 10000 }) }}
+                menuPortalTarget={document.body}
+                options={lensInterests}
+                onChange={(e)=>{console.log(e); handleChange(e); props.onChange(e)}}
+              />
+            </div>
+            <div style={{marginLeft: '2%', marginRight: '2%', marginTop: '5px', marginBottom: '10px'}}>
               <div>
-                <p style={{fontWeight:'bold', marginLeft: '5px'}}>Most frequently picked topics: </p>
+                <p style={{fontWeight:'bold', marginLeft: '2%'}}>Most frequently picked topics: </p>
               </div>
               <div style={{display: 'flex', flexWrap: 'wrap'}}>
                 { interests.map(interest => <Item key={interest} id={interest} onClick={handleClick}>{interest}</Item>) }
