@@ -14,7 +14,7 @@ type CardProps = {
   connected?: boolean; 
 };
 
-const CardWrapper = styled.div<{ fullWidth?: boolean; disabled: boolean }>`
+const CardWrapper = styled.div<{ fullWidth?: boolean; disabled: boolean; connected: boolean }>`
   display: flex;
   margin: 16px 0 0 16px;
   flex-direction: column;
@@ -25,8 +25,8 @@ const CardWrapper = styled.div<{ fullWidth?: boolean; disabled: boolean }>`
   padding: 2.4rem;
   border: 1px solid ${({ theme }) => theme.colors.border.default};
   border-radius: ${({ theme }) => theme.radii.default};
-  box-shadow: ${({ theme }) => theme.shadows.default};
-  filter: opacity(${({ disabled }) => (disabled ? '.4' : '1')});
+  box-shadow: ${({ theme, connected }) => connected ? theme.shadows.connected : theme.shadows.default};
+  filter: opacity(${({ disabled, connected }) => ((disabled && !connected) ? '.4' : '1')});
   align-self: stretch;
   align-items: center;
   ${({ theme }) => theme.mediaQueries.small} {
@@ -53,10 +53,10 @@ const Description = styled.div`
 `;
 
 
-export const Card = ({ content, disabled = false, fullWidth, connected }: CardProps) => {
+export const Card = ({ content, disabled = false, fullWidth, connected = false }: CardProps) => {
   const { title, description, button } = content;
   return (
-    <CardWrapper fullWidth={fullWidth} disabled={disabled}>
+    <CardWrapper fullWidth={fullWidth} disabled={disabled} connected={connected}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
         {title && (
           <Title>{title}</Title>

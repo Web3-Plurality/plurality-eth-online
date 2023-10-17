@@ -31,6 +31,7 @@ const theme = {
   },
   shadows: {
     default: '0px 7px 42px rgba(0, 0, 0, 0.1)',
+    connected: '0px 7px 42px rgba(0, 255, 0, 0.3)',
     button: '0px 0px 16.1786px rgba(0, 0, 0, 0.15);',
   },
 };

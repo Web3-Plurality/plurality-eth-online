@@ -509,6 +509,15 @@ const Index = () => {
       return;
     }
 
+    if (wallet || (signedInUser == "lens")) {
+
+      console.log("Chain name is: "+ chain!.name);
+      if (chain!.name !== "Polygon Mumbai") {
+        dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Please connect your Metamask to Polygon Mumbai Testnet\nhttps://chainlist.org/chain/80001" });
+      return -1;
+      }
+    }
+
     // get twitter
     if (wallet && !wallet.dispatcher)
       await updateDispatcher({ enabled: true });
@@ -930,6 +939,7 @@ const Index = () => {
               <Button
                 onClick={loginTwitter}
                 disabled={!isMetaMaskReady || !state.installedSnap || isTwitterConnected}
+                style={{filter: isTwitterConnected ? 'opacity(0.4)' : 'opacity(1)'}}
               > Verify Profile
               </Button>
             ),
@@ -957,6 +967,7 @@ const Index = () => {
               render={renderProps => (
                 <button onClick={renderProps.onClick} 
                 disabled={!state.installedSnap || !isMetaMaskReady || isFacebookConnected}
+                style={{filter: isFacebookConnected ? 'opacity(0.4)' : 'opacity(1)'}}
                 >Verify Profile</button>
               )}
             />

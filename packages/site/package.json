@@ -33,6 +33,7 @@
     "@lens-protocol/react-web": "^1.3.1",
     "@lens-protocol/wagmi": "^2.1.1",
     "@metamask/providers": "^9.0.0",
+    "@orbisclub/orbis-sdk": "^0.4.88",
     "@semaphore-protocol/data": "^3.11.1",
     "@semaphore-protocol/group": "^3.11.1",
     "@semaphore-protocol/identity": "^3.11.1",
