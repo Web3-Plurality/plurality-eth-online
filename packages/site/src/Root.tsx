@@ -4,7 +4,7 @@ import { polygonMumbai, polygon } from "wagmi/chains";
 import { configureChains, createConfig, WagmiConfig } from "wagmi";
 import { publicProvider } from "wagmi/providers/public";
 import { InjectedConnector } from "wagmi/connectors/injected";
-import { LensProvider, LensConfig, development, appId, ContentFocus, ProfileOwnedByMe, useCreatePost } from "@lens-protocol/react-web";
+import { LensProvider, LensConfig, development, appId } from "@lens-protocol/react-web";
 import { bindings as wagmiBindings } from "@lens-protocol/wagmi";
 
 import { createContext, FunctionComponent, ReactNode, useState } from 'react';
@@ -12,8 +12,6 @@ import { ThemeProvider } from 'styled-components';
 import { getThemePreference, setLocalStorage } from './utils';
 import { dark, light } from './config/theme';
 import { MetaMaskProvider } from './hooks';
-import { LensClient } from "@lens-protocol/client";
-
 
 const { publicClient, webSocketPublicClient } = configureChains(
   [polygonMumbai, polygon],

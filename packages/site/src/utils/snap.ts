@@ -74,7 +74,7 @@ export const sendHello = async () => {
  * Invoke the "commitment_request" method from the example snap.
  */
 
-export const getCommitment = async (profileType: string, groupId: string): Promise<boolean> => {
+export const getCommitment = async (profileType: string, groupId: string): Promise<[boolean, string]> => {
   let acceptance = await window.ethereum.request({
     method: 'wallet_invokeSnap',
     params: { snapId: defaultSnapOrigin, request: { method: 'commitment_request', params: {source:profileType} }},
@@ -87,11 +87,11 @@ export const getCommitment = async (profileType: string, groupId: string): Promi
     console.log(commitment);
     await createGroup(groupId);
     await addMemberToGroup(commitment, groupId);
-    return true;
+    return [true, commitment!.toString()];
   }
   else {
     console.log("User rejected the request for commitment");
-    return false;
+    return [false,""];
   }
 };
 

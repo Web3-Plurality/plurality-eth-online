@@ -41,6 +41,39 @@ permawebRouter.post("/", async (req: Request, res: Response) => {
 	}
   });
 
+  permawebRouter.post("/interests", async (req: Request, res: Response) => {
+    try {
+      console.log("In interests!!!");
+        const data = req.body;
+        const bundlr = new Bundlr("https://devnet.bundlr.network", "matic", process.env.SIGNER_PRIVATE_KEY, {
+	        providerUrl: "https://rpc-mumbai.maticvigil.com",
+        });
+        await bundlr.ready()
+        console.log("Bundlr ready");
+        let balance = await bundlr.getLoadedBalance();
+        console.log(balance);
+        let readableBalance = bundlr.utils.fromAtomic(balance).toNumber();
+        console.log("Readable balance: "+readableBalance);
+
+        if (readableBalance < MIN_FUNDS) {
+            console.log("Topping up");
+            await bundlr.fund(TOP_UP);
+            
+            balance = await bundlr.getLoadedBalance()
+            readableBalance = bundlr.utils.fromAtomic(balance).toNumber()
+            console.log("Updated balance: "+readableBalance);
+        }
+
+        const tx = await bundlr.upload(JSON.stringify(data), {
+            tags: [{ name: 'Content-Type', value: 'application/json' }],
+        })
+        res.status(200).send({ url: `https://arweave.net/${tx.id}` }).json();
+
+	} catch (e) {
+		//console.log(e);
+        res.status(500).send(e);
+	}
+  });
 
   // POST via IPFS
 /*permawebRouter.post("/", async (req: Request, res: Response) => {

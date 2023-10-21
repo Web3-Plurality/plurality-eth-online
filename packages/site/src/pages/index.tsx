@@ -26,7 +26,7 @@ import {
 import { 
   useAccount, 
   useConnect, 
-  useDisconnect 
+  useDisconnect
 } from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from 'react-bootstrap';
@@ -43,6 +43,8 @@ import useWindowSize from 'react-use/lib/useWindowSize';
 import Confetti from 'react-confetti';
 import { Orbis } from "@orbisclub/orbis-sdk";
 import useLocalStorageState from 'use-local-storage-state';
+import { addCommitmentInterests } from '../utils/web3Interests';
+
 
 const Container = styled.div`
   display: flex;
@@ -191,6 +193,10 @@ const Index = () => {
     ? state.isFlask
     : state.snapsDetected;
 
+  
+  const [currentCommitment, setCurrentCommitment] = useState(BigInt(18137272749059834439471007152698182806232309622054715094159604512127915733977));
+
+
   // orbis hooks
   const [orbisUser, setOrbisUser] = useState();
   const [orbis, setOrbis] = useState(new Orbis({}));
@@ -237,6 +243,8 @@ const Index = () => {
       await addInterestsToOrbis();
       dispatch({ type: MetamaskActions.SetInfoMessage, payload: "🎉 Orbis profile successfully personalized 🎉" });
     }
+    await uploadInterests(currentCommitment.toString(), userInterests);
+
     setShow(false);
     hideLoading();
     setLensProfileSuccess(true);
@@ -275,6 +283,25 @@ const Index = () => {
     else if (signedInUser == "orbis") {
       window.open(`${process.env.GATSBY_ORBIS_URL}/profile/${did}`,"_blank");
 
+    }
+  }
+  async function uploadInterests(commit: string, interests: string[]){
+    try {
+      const obj = { commitment: commit, interests: interests };
+      console.log("uploading post with data: "+ JSON.stringify(obj));
+      const response = await fetch(process.env.GATSBY_API_BASE_URL+'/permaweb/interests', {
+        method: 'POST',
+        body: JSON.stringify(obj), 
+        headers: new Headers({'content-type': 'application/json'})
+      })
+      console.log("got response from api");
+
+      const json = await response.json()
+      console.log(json.url);
+      const receipt = await addCommitmentInterests(commit, json.url);
+      return receipt;
+    } catch(err) {
+      console.log({ err })
     }
   }
   async function uploadJson(data: unknown){
@@ -571,8 +598,8 @@ const Index = () => {
         }
 
         dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Posting user's commitment on chain" });
-        const res =  await getCommitment(profileType, groupId);
-        
+        const [res, commitment] =  await getCommitment(profileType, groupId);
+        setCurrentCommitment(BigInt(commitment));
         if (!res) {
                     hideLoading();
                     dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User rejected the authentication request." });
@@ -621,15 +648,15 @@ const Index = () => {
         showLoading();
   
         dispatch({ type: MetamaskActions.SetInfoMessage, payload: "Posting user's commitment on chain" });
-        const res =  await getCommitment(profileType, groupId);
-        
+        const [res,commitment] =  await getCommitment(profileType, groupId);
+        setCurrentCommitment(BigInt(commitment));
         if (!res) {
           hideLoading();
           dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User rejected the authentication request." });
           return -1;
         }
         else {
-            
+
           dispatch({ type: MetamaskActions.SetInfoMessage, payload: "User's authentication commitment is now on chain" });
   
           // get zk
