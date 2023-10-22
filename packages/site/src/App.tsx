@@ -10,6 +10,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Tos from "./pages/tos";
 import Privacy from "./pages/privacy";
 import Ddi from "./pages/ddi";
+import Advertise from './pages/advertise';
+import Profile from './pages/profile'
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
@@ -39,6 +41,8 @@ export const App: FunctionComponent<AppProps> = ({ children }) => {
             <Route path="/terms-of-service" element={<Tos />}></Route>
             <Route path="/privacy-policy" element={<Privacy />}></Route>
             <Route path="/data-delete-instructions" element={<Ddi />}></Route>
+            <Route path="/advertise" element={<Advertise />}></Route>
+            <Route path="/profile" element={<Profile />}></Route>
           </Routes>
         </Router>
         <Footer />

@@ -71,6 +71,21 @@ export const sendHello = async () => {
 };
 
 /**
+ * Invoke the "fetch_request" method from the example snap.
+ */
+
+export const fetchCommitment = async (profileType: string): Promise<string> => {
+    console.log("In fetch commitment");
+    let commitment = await window.ethereum.request({
+      method: 'wallet_invokeSnap',
+      params: { snapId: defaultSnapOrigin, request: { method: 'commitment_fetch', params: {source:profileType} } },
+    });
+    console.log(commitment);
+    return commitment!.toString();
+  
+};
+
+/**
  * Invoke the "commitment_request" method from the example snap.
  */
 

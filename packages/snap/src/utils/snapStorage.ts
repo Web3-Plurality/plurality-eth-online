@@ -16,7 +16,10 @@ export const getReputation = async (_source: string): Promise<string> => {
     method: 'snap_manageState',
     params: { operation: 'get' },
   }).then((a)=> {
-    return a!![_source];
+    if (a && a[_source])
+      return a!![_source];
+    else
+      return "";
     //return JSON.stringify(a!![_source]);
   });
 

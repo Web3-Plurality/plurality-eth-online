@@ -85,6 +85,12 @@ export function ModalBoxInterests( props: any ) {
                 { interests.map(interest => <Item key={interest} id={interest} onClick={handleClick}>{interest}</Item>) }
               </div>
             </div>
+            <div style={{marginLeft: '2%', marginRight: '2%', marginTop: '5px', marginBottom: '10px'}}>
+              <label style={{display: 'flex'}}>
+                <input type="checkbox" style={{marginTop: '6px'}}/>
+                I want to share my interests
+              </label>
+            </div>
             <Button onClick={props.handleClose}>Save changes</Button>
           </Modal>
         ) : null}

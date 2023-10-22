@@ -1,9 +1,6 @@
 import { OnRpcRequestHandler } from '@metamask/snaps-types';
 import { panel, text } from '@metamask/snaps-ui';
 import { Identity } from "@semaphore-protocol/identity";
-import { Group } from "@semaphore-protocol/group";
-import { SemaphoreEthers } from "@semaphore-protocol/data";
-import { generateProof, FullProof } from "@semaphore-protocol/proof"
 
 import { addReputation, getReputation} from "./utils/snapStorage"; 
 //import { generateProofInSandbox } from './sandbox';
@@ -15,8 +12,13 @@ const createIdentity = (_source: string) : any => {
 }
 const getSavedCommitment = async (_source: string): Promise<string> => {
   const data = await getReputation(_source);
-  const identity = new Identity(data.toString())
-  return identity.commitment.toString();
+  if (data) {
+    const identity = new Identity(data.toString())
+    return identity.commitment.toString();
+  }
+  else {
+    return "";
+  }
 }
 
 const getZKProof = async (_source: string): Promise<string> => {

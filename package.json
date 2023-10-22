@@ -50,6 +50,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@orbisclub/orbis-sdk": "^0.4.88"
+    "@orbisclub/orbis-sdk": "^0.4.88",
+    "@trendyol-js/react-carousel": "^3.0.2"
   }
 }
