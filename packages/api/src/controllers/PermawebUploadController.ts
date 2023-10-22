@@ -1,8 +1,5 @@
 import express, { Request, Response } from "express";
 import Bundlr from "@bundlr-network/client";
-//import * as IPFS from 'ipfs-core';      
-import { IPFS } from 'ipfs-core';
-import axios, {isCancel, AxiosError} from 'axios';
 
 export const permawebRouter = express.Router();
 const TOP_UP = '100000000000000000'; // 0.1 MATIC

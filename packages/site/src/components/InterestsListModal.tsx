@@ -88,7 +88,7 @@ export function ModalBoxInterests( props: any ) {
             <div style={{marginLeft: '2%', marginRight: '2%', marginTop: '5px', marginBottom: '10px'}}>
               <label style={{display: 'flex'}}>
                 <input type="checkbox" style={{marginTop: '6px'}}/>
-                I want to share my interests
+                I agree to anonymously share my interests data
               </label>
             </div>
             <Button onClick={props.handleClose}>Save changes</Button>

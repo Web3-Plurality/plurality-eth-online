@@ -76,13 +76,16 @@ export const sendHello = async () => {
 
 export const fetchCommitment = async (profileType: string): Promise<string> => {
     console.log("In fetch commitment");
-    let commitment = await window.ethereum.request({
-      method: 'wallet_invokeSnap',
-      params: { snapId: defaultSnapOrigin, request: { method: 'commitment_fetch', params: {source:profileType} } },
-    });
-    console.log(commitment);
-    return commitment!.toString();
-  
+    try {
+      let commitment = await window.ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: { snapId: defaultSnapOrigin, request: { method: 'commitment_fetch', params: {source:profileType} } },
+      });
+      return commitment ? commitment.toString() : "";
+    } catch (e) {
+      console.log(e)
+    }
+    return "";
 };
 
 /**

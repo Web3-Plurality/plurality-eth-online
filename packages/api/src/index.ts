@@ -11,23 +11,22 @@ import swaggerUi from "swagger-ui-express";
 import * as swaggerDocument from "./swagger.json";
 import { permawebRouter } from './controllers/PermawebUploadController';
 import { tiktokRouter } from './controllers/OAuthTikTokController';
-
+import { subgraphRouter } from './controllers/SubgraphController';
 
 dotenv.config();
 
 const app: Application = express();
 const PORT = process.env.PORT;
-//app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(helmet());
 app.use(cors());
-//app.use(express.json());
 app.use(passport.initialize());
 app.use(session({ secret: 'keyboard cat', resave: false, saveUninitialized: true }));
 app.use("/oauth-twitter", twitterRouter);
 app.use("/permaweb", permawebRouter);
 app.use("/oauth-tiktok", tiktokRouter);
+app.use("/subgraph", subgraphRouter);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 

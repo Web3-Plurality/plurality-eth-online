@@ -1,49 +1,60 @@
 import styled from "styled-components";
 import { ScrollingCarousel } from '@trendyol-js/react-carousel';
 import { useEffect, useState } from "react";
-import { fetchCommitment, getCommitment, getLocalStorage } from "../utils";
+import { fetchCommitment, getLocalStorage } from "../utils";
 import { Button } from "react-bootstrap";
+import useLocalStorageState from "use-local-storage-state";
 
 
 const Profile = () => {
-    const [ads, setAds] = useState<string[]>([]);
-    const [contents, setContents] = useState<string[]>([]);
+    const [interests, setInterests] = useState("");
+    const [walletAddress, setWalletAddress] = useState("");
+    const [facebookCommitment, setFacebookCommitment] = useState("");
+    const [twitterCommitment, setTwitterCommitment] = useState("");
 
-    const fetchAdvertisements = async () => {
-        console.log("Fetching for "+process.env.GATSBY_FACEBOOK);
+     // facebook and twitter info
+    const [isFacebookConnected, setFacebookConnected] = useLocalStorageState('isFacebookConnected', {defaultValue: false});
+    const [isTwitterConnected, setTwitterConnected] = useLocalStorageState('isTwitterConnected', {defaultValue: false});
+    const [signedInUser, setSignedInUser] = useLocalStorageState('signedInUser', {defaultValue: ""});
+    const [did, setDid] = useLocalStorageState('did', {defaultValue: ""});
+
+    async function fetchInterestsFromSubgraph(commitments: string[]){
+        try {
+            console.log("Fetching interests for commitments: "+ JSON.stringify(commitments));
+            const response = await fetch(process.env.GATSBY_API_BASE_URL+'/subgraph/', {
+              method: 'POST',
+              body: JSON.stringify(commitments), 
+              headers: new Headers({'content-type': 'application/json'}),
+            })
+            const json = await response.json()
+            const interestsObj = json.data.interestsMetaDatas;
+            let interests = "";
+            for (let i=0; i< interestsObj.length;i++) {
+                interests = interests + interestsObj[i].interests;
+            }
+            return interests;
+
+          } catch(err) {
+            console.log({ err })
+        }
+    }
+
+    const fetchInterests = async () => {
         const commitmentFB =  await fetchCommitment(process.env.GATSBY_FACEBOOK!);
-        console.log("commitment from FB" + commitmentFB)
-        console.log("Fetching for "+process.env.GATSBY_TWITTER);
+        setFacebookCommitment(commitmentFB);
         const commitmentTW =  await fetchCommitment(process.env.GATSBY_TWITTER!);
-        console.log("commitment from TW" + commitmentTW)
+        setTwitterCommitment(commitmentTW);
+        let commitments: string[] = [];
+        if (commitmentFB)   commitments.push(commitmentFB);
+        if (commitmentTW)   commitments.push(commitmentTW);
+        const interests = await fetchInterestsFromSubgraph(commitments);
+        setInterests(interests!);
+        return interests;
     }
 
     useEffect(() => {
-        let interests = ["ART_ENTERTAINMENT__BOOKS", "ART_ENTERTAINMENT__ART"]; // todo: dynamically fetch it from user
-       
-        let localAds: string[] = []
-        for (let i of interests) {
-            const ad = getLocalStorage(i);
-            if (ad) {
-                localAds.push(ad);
-            };
-        };
-        if (localAds.length != 0) {
-            setAds(localAds);
-        };
+        fetchInterests().catch(console.error);
       }, []);
-    
-    useEffect(() => {
-        let localContent: string[] = [];
-        for (let ad of ads) {
-            const adContents = ad.split(";")
-            for (let adContent of adContents) {
-                localContent.push(adContent);
-            }
-        };
-        localContent = [...new Set(localContent)]
-        setContents(localContent);
-        }, [ads]);
     
     const contentComponent = {
         marginLeft: '20%',
@@ -70,24 +81,37 @@ const Profile = () => {
     return (
         <div style={contentComponent}>
             <div style={{height: "100px"}}></div>
-            <Subtitle>You may interested in...</Subtitle>
-            <ScrollingCarousel hideArrows={true} show={2.5} slide={2} dynamic={true} swiping swipeOn={0.3}>
-                {contents.map(content => <Sticker key={content} id={content} color="#ffffff">{content}</Sticker>)}
-	        </ScrollingCarousel>
+            <h1>My Profile</h1>
+            {!signedInUser && (
+                <p>Please sign in first to view your profile details</p>
+            )}
+            {walletAddress && (
+                <p>Address: {walletAddress}</p>
+            )}
+            {signedInUser && interests && (
+                <p>We have captured the following interests: {interests}</p>
+            )}
+            {signedInUser && (
+                <p>Currently signed in with: {signedInUser}</p>
+            )}
+            {did && (
+                <p>Orbis did:pkh is : {signedInUser}</p>
+            )}
+            {isTwitterConnected && (
+                <p>Twitter social connected? : YES</p>
+            )}
+            {signedInUser && twitterCommitment && isTwitterConnected && (
+                <p>Twitter decentralized identifier : {twitterCommitment}</p>
+            )}
+            {isFacebookConnected && (
+                <p>Facebook social connected? : YES</p>
+            )}
+            {signedInUser && facebookCommitment && isFacebookConnected && (
+                <p>Facebook decentralized identifier : {facebookCommitment}</p>
+            )}
             <div style={{height: "220px"}}></div>
-            <Button
-                onClick={fetchAdvertisements}
-              >  Fetch Advertisements
-              </Button>
         </div>
     )
-}
-
-const Sticker = ({children, color}) => {
-    return ( 
-        <span style={{ backgroundColor: color, borderRadius: '2px', color: '#000000', padding: '20px 10px', display: 'block', height: '200px', margin: '16px 16px 16px 0', minWidth: '250px', maxWidth: "350px", border: "1px solid #BBC0C5", boxShadow: "7px 7px 7px rgba(0, 255, 0, 0.1)"}}> {children} 
-        </span>
-    );
 }
 
 export default Profile;

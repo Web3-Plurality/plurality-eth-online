@@ -66,7 +66,8 @@
     "util": "^0.12.5",
     "viem": "^1.10.14",
     "wagmi": "^1.4.2",
-    "web3": "^1.10.2"
+    "web3": "^1.10.2",
+    "@trendyol-js/react-carousel": "^3.0.2"
   },
   "devDependencies": {
     "@metamask/eslint-config": "^10.0.0",

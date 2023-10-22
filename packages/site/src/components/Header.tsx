@@ -8,6 +8,8 @@ import {
   useActiveProfile,
 } from "@lens-protocol/react-web";
 import useLocalStorageState from 'use-local-storage-state';
+import { useState } from 'react';
+import { ModalBoxProfile } from './ProfileModal'
 
 
 
@@ -112,6 +114,7 @@ export const Header = ({
   const { data: wallet, loading } = useActiveProfile();
   const [signedInUser, setSignedInUser] = useLocalStorageState('signedInUser', {defaultValue: ""});
   const [did, setDid] = useLocalStorageState('did', {defaultValue: ""});
+  const [showModal, setShowModal] = useState(false);
 
   let profile = "";
   let handle = "";
@@ -127,7 +130,17 @@ export const Header = ({
     profile = process.env.GATSBY_ORBIS_URL+"/profile/"+did;
     handle = did;
   }
-  const theme = useTheme();  
+  const theme = useTheme(); 
+  const profileUrl = process.env.GATSBY_UI_BASE_URL + "/profile"; 
+
+  const handleClose = async () => {
+    setShowModal(false);
+  }
+
+  const onModalOpen = async () => {
+    setShowModal(true);
+  }
+
   return (
     <HeaderWrapper>
       <LogoWrapper>
@@ -135,7 +148,9 @@ export const Header = ({
         <Title>Plurality</Title>
       </LogoWrapper>
       <RightContainer>
-        <a href={profile}><b> {handle} </b></a>
+        {/* <a href={profileUrl}><b> {handle} </b></a> */}
+        <ModalBoxProfile show={showModal} handleClose={handleClose}/>
+        {handle && <a href="#" onClick={onModalOpen} > {handle} </a>}
         &nbsp;
         &nbsp;
         <Toggle

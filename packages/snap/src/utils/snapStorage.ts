@@ -1,10 +1,20 @@
-export const addReputation = (_source: string, id_obj: string): string => {
+export const addReputation = async (_source: string, id_obj: string): Promise<string> => {
   
+  let state = {"facebook":"","twitter":""};
+  if (_source == "facebook") {
+    let twitterobj = await getReputation("twitter");
+    state = {"facebook":id_obj,"twitter":twitterobj};
+  }
+  else if (_source == "twitter") {
+    let facebookobj = await getReputation("facebook");
+    state = {"facebook":facebookobj,"twitter":id_obj};
+  }
+
   // Persist some data.
   snap.request({
     method: 'snap_manageState',
     params: { operation: 'update', 
-    newState: {[_source] : id_obj}
+    newState: state
     }
   });
   return id_obj;

@@ -3,11 +3,9 @@ import { panel, text } from '@metamask/snaps-ui';
 import { Identity } from "@semaphore-protocol/identity";
 
 import { addReputation, getReputation} from "./utils/snapStorage"; 
-//import { generateProofInSandbox } from './sandbox';
-
 const createIdentity = (_source: string) : any => {
   const identity = new Identity();
-  addReputation(_source,identity.toString());
+  addReputation(_source,identity.toString()).catch(console.error);
   return identity;
 }
 const getSavedCommitment = async (_source: string): Promise<string> => {
